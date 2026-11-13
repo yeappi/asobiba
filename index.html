@@ -3,7 +3,7 @@
 <style>
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#0b1020;color:#e7eefb;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN",sans-serif}body{overflow-x:hidden}main{max-width:600px;margin:0 auto;padding:18px 14px 28px}header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}h1{font-size:19px;letter-spacing:.03em;margin:0}header small{color:#91a2c1;font-size:11px}.tag{border:1px solid #435876;color:#aabfe5;border-radius:16px;padding:5px 9px;font-size:11px}.output{min-height:104px;padding:16px;border:1px solid #31435d;border-radius:18px;background:#141d30;white-space:pre-wrap;overflow-wrap:anywhere;font-size:25px;line-height:1.6}.output.empty{color:#62738d;font-size:17px}.toolbar{display:flex;gap:7px;margin:10px 0 14px}button{background:#1a2840;color:#e9f2ff;border:1px solid #344867;border-radius:11px;padding:10px 8px;font-size:13px;cursor:pointer}.toolbar button{flex:1}.canvas-wrap{border-radius:21px;overflow:hidden;border:1px solid #334864;background:#101b2d}.status{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:65px;padding:12px 14px}.status strong{font-size:14px}.status small{display:block;color:#91a2bc;margin-top:5px;font-size:11px}.selected{font-size:30px;font-weight:700;color:#91e6d3;min-width:32px;text-align:center}canvas{display:block;width:100%;height:min(57dvh,490px);min-height:330px;touch-action:none;background:radial-gradient(circle at center,#1a2c45 0%,#101a2d 65%,#0c1525 100%)}.caption{padding:9px 12px;text-align:center;color:#92a4c0;font-size:11px}.help{margin-top:14px;padding:14px 16px;border:1px solid #283a53;border-radius:17px;background:#111b2d}.help strong{font-size:13px}.help p{font-size:12px;line-height:1.75;color:#a8b8d1;margin:6px 0}.help button{margin-top:6px} .coords{font-variant-numeric:tabular-nums;font-size:11px;color:#7790ae;text-align:right;margin-top:7px}
 </style></head><body><main>
-<header><div><h1>一筆かな <span style="color:#70d9bc">✿</span></h1><small>asobiba ・相対方向フリック実験</small></div><span class="tag">v0.3</span></header>
+<header><div><h1>一筆かな <span style="color:#70d9bc">✿</span></h1><small>asobiba ・相対方向フリック実験</small></div><span class="tag">v0.4</span></header>
 <div id="output" class="output empty">ここに文章が表示されます</div>
 <div class="toolbar"><button id="back">⌫ 戻す</button><button id="space">空白</button><button id="enter">改行</button><button id="recal">方角を再設定</button><button id="clear">消去</button></div>
 <div class="canvas-wrap">
@@ -42,20 +42,20 @@ if(north!==null){ctx.save();ctx.translate(w-33,30);ctx.rotate(-north);ctx.stroke
 if(stroke?.points.length){const p=stroke.points;ctx.lineWidth=5;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#78d9d3';ctx.beginPath();ctx.moveTo(p[0].x,p[0].y);for(let i=1;i<p.length;i++)ctx.lineTo(p[i].x,p[i].y);ctx.stroke();for(const q of segments){ctx.fillStyle='#f4b5d1';ctx.beginPath();ctx.arc(q.x,q.y,5,0,2*PI);ctx.fill()}}
 // Fixed upper-left flower preview, independent of fingertip location.
 {
-const px=10,py=10,bw=186,bh=195,cx=px+bw/2,cy=py+112;
+const px=8,py=8,bw=116,bh=126,cx=px+bw/2,cy=py+72;
 ctx.save();ctx.fillStyle='rgba(8,15,28,.94)';ctx.strokeStyle='rgba(123,152,190,.65)';ctx.lineWidth=1;ctx.beginPath();ctx.roundRect(px,py,bw,bh,15);ctx.fill();ctx.stroke();
-ctx.fillStyle='#a6bedc';ctx.font='12px sans-serif';ctx.textAlign='center';ctx.fillText('次の方向',cx,py+20);
+ctx.fillStyle='#a6bedc';ctx.font='12px sans-serif';ctx.textAlign='center';ctx.fillText('次',cx,py+14);
 const labels=currentLabels(),base=incoming;
 if(labels&&base!==null){
- ctx.save();ctx.translate(cx,cy);ctx.scale(.72,.72);
+ ctx.save();ctx.translate(cx,cy);ctx.scale(.43,.43);
  for(const pet of PETALS){roundedPetal(0,0,base+deg(pet.angle),labels[pet.index]);}
  ctx.restore();
- ctx.fillStyle='#82e5d4';ctx.beginPath();ctx.arc(cx,cy,7,0,2*PI);ctx.fill();
- const v=unit(base,20);ctx.strokeStyle='#80e5d3';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+v.x,cy+v.y);ctx.stroke();
+ ctx.fillStyle='#82e5d4';ctx.beginPath();ctx.arc(cx,cy,4,0,2*PI);ctx.fill();
+ const v=unit(base,13);ctx.strokeStyle='#80e5d3';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+v.x,cy+v.y);ctx.stroke();
 }else{
- ctx.fillStyle='#9bb0ce';ctx.font='12px sans-serif';ctx.textAlign='center';ctx.fillText(north===null?'直線で方角を設定':'方向を選択中',cx,cy);
+ ctx.fillStyle='#9bb0ce';ctx.font='12px sans-serif';ctx.textAlign='center';ctx.fillText(north===null?'方角設定':'選択中',cx,cy);
 }
-ctx.fillStyle='#8da4bf';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText('来た方向を基準に回転',cx,py+bh-12);ctx.restore();
+ctx.fillStyle='#8da4bf';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText('相対方向',cx,py+bh-8);ctx.restore();
 }
 if(tip){ctx.beginPath();ctx.arc(tip.x,tip.y,8,0,2*PI);ctx.fillStyle='#77dcd2';ctx.fill();ctx.strokeStyle='#ffffff';ctx.lineWidth=1.5;ctx.stroke()}
 else if(north===null){ctx.fillStyle='#9fb2d5';ctx.font='14px sans-serif';ctx.textAlign='center';ctx.fillText('→ 最初に直線を描いてください',w/2,h/2)}else {ctx.fillStyle='#8fa1be';ctx.font='14px sans-serif';ctx.textAlign='center';ctx.fillText('ここから指を動かす',w/2,h/2)}
