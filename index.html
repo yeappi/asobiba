@@ -24,9 +24,9 @@ const canvas=document.getElementById('pad'),ctx=canvas.getContext('2d'),$=s=>doc
 const ROWS=[['あ','か','さ','た','な'],['は','ま','や','ら','わ']];
 const TABLE=[['あ','い','う','え','お'],['か','き','く','け','こ'],['さ','し','す','せ','そ'],['た','ち','つ','て','と'],['な','に','ぬ','ね','の'],['は','ひ','ふ','へ','ほ'],['ま','み','む','め','も'],['や','','ゆ','','よ'],['ら','り','る','れ','ろ'],['わ','を','ん','ー','、']];
 const PETALS=[{angle:-135,index:0},{angle:-75,index:1},{angle:180,index:2},{angle:75,index:3},{angle:135,index:4}];
-const GROUP_THRESHOLD=deg(64),BEND_THRESHOLD=deg(63),STABLE_SAMPLES=5;
 let north=null,output='',stroke=null,tip=null,phase='calibrate',group=null,row=null,vowel=null,incoming=null,segments=[],nextCandidates=[],pending=null,directions=[],lastStable=null;
 const PI=Math.PI,deg=x=>x*PI/180,radToDeg=x=>Math.round(x*180/PI),norm=a=>Math.atan2(Math.sin(a),Math.cos(a)),heading=(a,b)=>Math.atan2(-(b.y-a.y),b.x-a.x);
+const GROUP_THRESHOLD=deg(64),BEND_THRESHOLD=deg(63),STABLE_SAMPLES=5;
 const unit=(a,b)=>({x:Math.cos(a)*b,y:-Math.sin(a)*b}),direction=(a,b)=>Math.atan2(Math.sin(a)+Math.sin(b),Math.cos(a)+Math.cos(b));
 function getPoint(e){const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
 function currentLabels(){if(phase==='row')return ROWS[group];if(phase==='vowel')return TABLE[group*5+row];return null}
