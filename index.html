@@ -3,7 +3,7 @@
 <style>
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#0b1020;color:#e7eefb;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN",sans-serif}body{overflow-x:hidden}main{max-width:600px;margin:0 auto;padding:18px 14px 28px}header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}h1{font-size:19px;letter-spacing:.03em;margin:0}header small{color:#91a2c1;font-size:11px}.tag{border:1px solid #435876;color:#aabfe5;border-radius:16px;padding:5px 9px;font-size:11px}.output{min-height:104px;padding:16px;border:1px solid #31435d;border-radius:18px;background:#141d30;white-space:pre-wrap;overflow-wrap:anywhere;font-size:25px;line-height:1.6}.output.empty{color:#62738d;font-size:17px}.toolbar{display:flex;gap:7px;margin:10px 0 14px}button{background:#1a2840;color:#e9f2ff;border:1px solid #344867;border-radius:11px;padding:10px 8px;font-size:13px;cursor:pointer}.toolbar button{flex:1}.canvas-wrap{border-radius:21px;overflow:hidden;border:1px solid #334864;background:#101b2d}.status{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:65px;padding:12px 14px}.status strong{font-size:14px}.status small{display:block;color:#91a2bc;margin-top:5px;font-size:11px}.selected{font-size:30px;font-weight:700;color:#91e6d3;min-width:32px;text-align:center}canvas{display:block;width:100%;height:min(57dvh,490px);min-height:330px;touch-action:none;background:radial-gradient(circle at center,#1a2c45 0%,#101a2d 65%,#0c1525 100%)}.caption{padding:9px 12px;text-align:center;color:#92a4c0;font-size:11px}.help{margin-top:14px;padding:14px 16px;border:1px solid #283a53;border-radius:17px;background:#111b2d}.help strong{font-size:13px}.help p{font-size:12px;line-height:1.75;color:#a8b8d1;margin:6px 0}.help button{margin-top:6px} .coords{font-variant-numeric:tabular-nums;font-size:11px;color:#7790ae;text-align:right;margin-top:7px}
 </style></head><body><main>
-<header><div><h1>一筆かな <span style="color:#70d9bc">✿</span></h1><small>asobiba ・相対方向フリック実験</small></div><span class="tag">v0.4</span></header>
+<header><div><h1>一筆かな <span style="color:#70d9bc">✿</span></h1><small>asobiba ・相対方向フリック実験</small></div><span class="tag">v0.5</span></header>
 <div id="output" class="output empty">ここに文章が表示されます</div>
 <div class="toolbar"><button id="back">⌫ 戻す</button><button id="space">空白</button><button id="enter">改行</button><button id="recal">方角を再設定</button><button id="clear">消去</button></div>
 <div class="canvas-wrap">
@@ -15,7 +15,7 @@
 <p>① 最初に右へ直線を引いて基準方向を決める。途中でも、<b>直線だけ</b>を描いて指を離すと、その線の方向に再設定。</p>
 <p>② 次の一筆は、基準方向に対して<b>上</b>が「あかさたな」、<b>下</b>が「はまやらわ」。そのあと<b>曲がる</b>ことで行を選択。</p>
 <p>③ 曲がった先の進行方向を新しい基準として、母音の5枚の花びらが回る。<b>そこで離せば「あ段」</b>。さらに曲がれば「い・う・え・お」などを選ぶ。</p>
-<p>花びらの角度は進行方向に対して <b>左75°・左135°・逆戻り180°・右135°・右75°</b>。直進は選択肢なし。移動距離で文字が変わったり、次の段階に進んだりはしません。</p>
+<p>花びらは進行方向に対して <b>左75°→左135°→逆戻り180°→右135°→右75°</b> の順で、行も母音も1〜5を連続配置。直進は選択肢なし。移動距離で文字が変わったり、次の段階に進んだりはしません。</p>
 <p>※ 角度変化約63°以上と方向の安定を確認して曲がり角を判定します。花びらは左上に固定表示。移動距離で選択は変わりません。<br>※ 今は入力方式の実験なので、記号・濁点・小文字は未実装。母音の5択は「あ・い・う・え・お」の順。</p><div class="coords" id="debug"></div>
 </div></main>
 <script>
@@ -23,7 +23,8 @@
 const canvas=document.getElementById('pad'),ctx=canvas.getContext('2d'),$=s=>document.getElementById(s);
 const ROWS=[['あ','か','さ','た','な'],['は','ま','や','ら','わ']];
 const TABLE=[['あ','い','う','え','お'],['か','き','く','け','こ'],['さ','し','す','せ','そ'],['た','ち','つ','て','と'],['な','に','ぬ','ね','の'],['は','ひ','ふ','へ','ほ'],['ま','み','む','め','も'],['や','','ゆ','','よ'],['ら','り','る','れ','ろ'],['わ','を','ん','ー','、']];
-const PETALS=[{angle:-135,index:0},{angle:-75,index:1},{angle:180,index:2},{angle:75,index:3},{angle:135,index:4}];
+// Ordered continuously along the five-petal arc: upper-right → upper-left → back → lower-left → lower-right.
+const PETALS=[{angle:75,index:0},{angle:135,index:1},{angle:180,index:2},{angle:-135,index:3},{angle:-75,index:4}];
 let north=null,output='',stroke=null,tip=null,phase='calibrate',group=null,row=null,vowel=null,incoming=null,segments=[],nextCandidates=[],pending=null,directions=[],lastStable=null;
 const PI=Math.PI,deg=x=>x*PI/180,radToDeg=x=>Math.round(x*180/PI),norm=a=>Math.atan2(Math.sin(a),Math.cos(a)),heading=(a,b)=>Math.atan2(-(b.y-a.y),b.x-a.x);
 const GROUP_THRESHOLD=deg(64),BEND_THRESHOLD=deg(63),STABLE_SAMPLES=5;
