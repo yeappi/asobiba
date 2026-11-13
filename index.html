@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#101525">
+<title>一筆かな | asobiba</title><style>
+:root{color-scheme:dark;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN",sans-serif;background:#0a0e19;color:#e7efff}*{box-sizing:border-box}body{margin:0;min-height:100dvh;background:radial-gradient(ellipse at 40% 0%,#1a2b44,#0a0e19 60%)}main{max-width:540px;margin:auto;padding:20px 16px 24px}header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}h1{font-size:18px;letter-spacing:.06em;margin:0}small,.muted{color:#8fa0b9}button{cursor:pointer;border:1px solid #37455e;border-radius:12px;background:#182337;color:#e6efff;padding:10px 14px;font-size:14px}button:active{background:#2c4162}.result{min-height:96px;overflow-wrap:anywhere;background:#131d2d;border:1px solid #32445d;border-radius:17px;padding:18px;font-size:24px;line-height:1.6;white-space:pre-wrap}.tools{display:flex;gap:9px;margin:10px 0 20px;flex-wrap:wrap}.tools button{flex:1}.card{background:#111a2a;border:1px solid #30415c;border-radius:20px;overflow:hidden}.status{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:14px 16px;min-height:72px}.stage{font-size:15px;font-weight:700}.hint{font-size:12px;color:#8b9bb4;margin-top:5px}.preview{font-weight:700;font-size:28px;color:#9fead7}canvas{display:block;width:100%;height:380px;touch-action:none;background:radial-gradient(circle at center,#152840,#0a1220);cursor:crosshair}.foot{font-size:12px;color:#8d9db7;text-align:center;padding:10px}.legend{margin-top:16px;border:1px solid #2a3c55;border-radius:15px;padding:14px;background:#111929}.legend h2{font-size:14px;margin:0 0 8px}.legend p{font-size:13px;line-height:1.7;color:#afbdd2;margin:6px 0}.legend code{color:#a4e6dc} .chips{display:flex;gap:5px;justify-content:space-between}.chip{flex:1;text-align:center;padding:8px 2px;background:#1d2b40;border-radius:8px;font-size:12px}.meta{font-size:11px;color:#8095b4;margin-top:8px} .toplink{font-size:12px;color:#c2d3ed;text-decoration:none} 
+</style></head><body><main>
+<header><div><h1>一筆かな <span class="muted">/ asobiba</span></h1><small>画面を見ない日本語入力の実験</small></div><button id="resetAxis">方向を再設定</button></header>
+<div class="result" id="output" aria-label="入力した文章"></div>
+<div class="tools"><button id="back">⌫ 1文字戻す</button><button id="space">空白</button><button id="newline">改行</button><button id="clear">全文消去</button></div>
+<div class="card"><div class="status"><div><div class="stage" id="stage">まず右に直線を引く</div><div class="hint" id="hint">これが方向の基準。毎文字は不要</div></div><div class="preview" id="preview">→</div></div>
+<canvas id="pad"></canvas><div class="foot" id="foot">どこからでも始められます。指を離すと確定</div></div>
+<div class="legend"><h2>操作ルール（実験用の割り当て）</h2>
+<p><b>最初の1回だけ</b> 右へ直線を引き、基準方向を登録。あとから直線だけ引き直すと、いつでも方向を再設定できます。</p>
+<p><b>1文字ごと</b> 指を置いて上方向なら「あかさたな」、下方向なら「はまやらわ」。続く曲がり方で行を選び、さらに曲がれば母音を選択。曲がらず離せば「あ段」です。</p>
+<div class="chips"><div class="chip">↶ 大きく左<br><b>1</b></div><div class="chip">↰ 左90°<br><b>2</b></div><div class="chip">↖ 左小<br><b>3</b></div><div class="chip">↗ 右小<br><b>4</b></div><div class="chip">↱ 右90°以上<br><b>5</b></div></div>
+<p>行は 1〜5 が各グループの五十音行、母音は 1〜5 が「あ・い・う・え・お」。曲がり角を選ぶ方式なので、同じ方向に伸ばし続けても次の入力にはなりません。</p>
+<p class="meta">角度は仮設定。短い手ぶれを曲がりと誤認しないための最低限の移動量だけ使用します。スマホの通常キーボード自体の置き換えではなく、ブラウザ内の入力実験です。</p></div>
+</main><script>
+const c=document.getElementById('pad'),ctx=c.getContext('2d');
+const el=id=>document.getElementById(id);
+const groups=[['あ','か','さ','た','な'],['は','ま','や','ら','わ']];
+const kana=[['あ','い','う','え','お'],['か','き','く','け','こ'],['さ','し','す','せ','そ'],['た','ち','つ','て','と'],['な','に','ぬ','ね','の'],['は','ひ','ふ','へ','ほ'],['ま','み','む','め','も'],['や','　','ゆ','　','よ'],['ら','り','る','れ','ろ'],['わ','を','ん','ー','、']];
+let axis=null, active=false,pts=[],segments=[],phase='axis',group=null,row=null,vowel=null,content='';
+const rad=d=>d*Math.PI/180, wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
+function turnIndex(a){let d=wrap(a)*180/Math.PI; if(d<=-112.5)return 0;if(d<=-67.5)return 1;if(d<=-22.5)return 2;if(d<22.5)return -1;if(d<67.5)return 3;return 4}
+function pos(e){const r=c.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
+function heading(a,b){return Math.atan2(-(b.y-a.y),b.x-a.x)}
+function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
+function update(){el('output').textContent=content||'ここに入力されます';el('output').style.color=content?'#eff6ff':'#7589a5';el('preview').textContent=axis===null?'→':(row!==null? (kana[group*5+row]?.[vowel??0]||'') :group!==null?'…':'✓');el('stage').textContent=axis===null?'まず右に直線を引く':active?(group===null?'上または下へ':row===null?'曲がって行を選ぶ':'さらに曲がって母音を選ぶ'):'文字入力できます';el('hint').textContent=axis===null?'一度決めれば毎文字は不要':active?'直進で確定は進みません':'直線だけ引くと方向を再設定できます'}
+function render(){const dpr=window.devicePixelRatio||1,w=c.clientWidth,h=c.clientHeight;if(c.width!==Math.round(w*dpr)||c.height!==Math.round(h*dpr)){c.width=Math.round(w*dpr);c.height=Math.round(h*dpr)}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);ctx.strokeStyle='#223650';ctx.lineWidth=1;for(let x=0;x<w;x+=34){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}for(let y=0;y<h;y+=34){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}
+if(axis!==null){const x=w-35,y=40;ctx.strokeStyle='#55d9bd';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+Math.cos(axis)*22,y-Math.sin(axis)*22);ctx.stroke();ctx.fillStyle='#9fead7';ctx.font='11px sans-serif';ctx.fillText('基準',w-78,44)}
+if(pts.length){ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);pts.forEach(p=>ctx.lineTo(p.x,p.y));ctx.strokeStyle=axis===null?'#7aa4ff':'#6fe2cc';ctx.lineWidth=5;ctx.stroke();for(const s of segments){ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(s.point.x,s.point.y,5,0,Math.PI*2);ctx.fill()}}
+}
+let start=null,anchor=null,dir=null,lastTurn=null;
+function resetStroke(){pts=[];segments=[];group=null;row=null;vowel=null;start=null;anchor=null;dir=null;lastTurn=null;phase=axis===null?'axis':'group';update();render()}
+function classify(dx){return turnIndex(dx)}
+function processPoint(p){pts.push(p);if(!start){start=p;anchor=p;return}if(pts.length<3)return;
+const travelled=dist(anchor,p);if(travelled<17)return;
+const next=heading(anchor,p);
+if(phase==='axis'){return}
+if(phase==='group'){
+ const relative=wrap(next-axis)*180/Math.PI;
+ if(Math.abs(relative)<28)return;
+ group=relative>0?0:1;dir=next;anchor=p;phase='row';segments.push({point:p});update();return;
+}
+const delta=wrap(next-dir);
+if(Math.abs(delta)<rad(26))return;
+if(travelled<24)return;
+const idx=classify(delta);if(idx<0)return;
+// A bend is recognized once; use the new heading as baseline. A new bend requires re-establishing a straight segment.
+if(phase==='row'){row=idx;phase='vowel';}else if(phase==='vowel'){vowel=idx;phase='done';}
+dir=next;anchor=p;segments.push({point:p});update();
+}
+function endStroke(){if(!active)return;active=false;let total=pts.length?dist(pts[0],pts[pts.length-1]):0;
+if(axis===null){if(pts.length>2&&total>48){axis=heading(pts[0],pts[pts.length-1]);el('foot').textContent='方向設定完了。今後は各文字で横線不要';}}
+else if(group!==null&&row!==null){const ch=kana[group*5+row][vowel??0];if(ch&&ch!=='　')content+=ch}
+else if(group===null&&pts.length>3&&total>50){const straight=heading(pts[0],pts[pts.length-1]);let deviation=0;for(const p of pts){const a=pts[0],dx=p.x-a.x,dy=p.y-a.y;deviation=Math.max(deviation,Math.abs(dx*Math.sin(straight)+dy*Math.cos(straight)))}if(deviation<20){axis=straight;el('foot').textContent='直線を検出：基準方向を更新しました'}}
+resetStroke()}
+c.addEventListener('pointerdown',e=>{e.preventDefault();c.setPointerCapture(e.pointerId);active=true;resetStroke();active=true;processPoint(pos(e));update()});
+c.addEventListener('pointermove',e=>{if(!active)return;e.preventDefault();processPoint(pos(e));render()});
+c.addEventListener('pointerup',e=>{if(!active)return;e.preventDefault();processPoint(pos(e));endStroke()});
+c.addEventListener('pointercancel',()=>{active=false;resetStroke()});
+el('resetAxis').onclick=()=>{axis=null;resetStroke();el('foot').textContent='右方向に一度、直線を引いてください'};
+el('back').onclick=()=>{content=content.slice(0,-1);update()};
+el('clear').onclick=()=>{content='';update()};
+el('space').onclick=()=>{content+=' ';update()};
+el('newline').onclick=()=>{content+='\n';update()};
+window.addEventListener('resize',render);resetStroke();
+</script></body></html>
