@@ -76,8 +76,8 @@ function finish(e){if(!stroke)return;e.preventDefault();track(getPoint(e));const
 if(pts.length>2){
  if(north===null){north=heading(pts[0],pts[pts.length-1]);$('note').textContent='基準方向を登録しました';}
  else if(row!==null){const ch=currentChar();if(ch)output+=ch;$('note').textContent=ch?'「'+ch+'」を入力しました':'選択された文字は空欄です';}
- else if(group===null){
- // A stroke without turns declares the current orientation.
+ else if(row===null){
+ // Any stroke without a completed row choice is a direction declaration.
  north=heading(pts[0],pts[pts.length-1]);$('note').textContent='直線から方向を再設定しました';
  }else{$('note').textContent='行まで曲がってから指を離すと入力されます'}
 }
