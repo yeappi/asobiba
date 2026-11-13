@@ -3,27 +3,28 @@
 <style>
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#0b1020;color:#e7eefb;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN",sans-serif}body{overflow-x:hidden}main{max-width:600px;margin:0 auto;padding:18px 14px 28px}header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}h1{font-size:19px;letter-spacing:.03em;margin:0}header small{color:#91a2c1;font-size:11px}.tag{border:1px solid #435876;color:#aabfe5;border-radius:16px;padding:5px 9px;font-size:11px}.output{min-height:104px;padding:16px;border:1px solid #31435d;border-radius:18px;background:#141d30;white-space:pre-wrap;overflow-wrap:anywhere;font-size:25px;line-height:1.6}.output.empty{color:#62738d;font-size:17px}.toolbar{display:flex;gap:7px;margin:10px 0 14px}button{background:#1a2840;color:#e9f2ff;border:1px solid #344867;border-radius:11px;padding:10px 8px;font-size:13px;cursor:pointer}.toolbar button{flex:1}.canvas-wrap{border-radius:21px;overflow:hidden;border:1px solid #334864;background:#101b2d}.status{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:65px;padding:12px 14px}.status strong{font-size:14px}.status small{display:block;color:#91a2bc;margin-top:5px;font-size:11px}.selected{font-size:30px;font-weight:700;color:#91e6d3;min-width:32px;text-align:center}canvas{display:block;width:100%;height:min(57dvh,490px);min-height:330px;touch-action:none;background:radial-gradient(circle at center,#1a2c45 0%,#101a2d 65%,#0c1525 100%)}.caption{padding:9px 12px;text-align:center;color:#92a4c0;font-size:11px}.help{margin-top:14px;padding:14px 16px;border:1px solid #283a53;border-radius:17px;background:#111b2d}.help strong{font-size:13px}.help p{font-size:12px;line-height:1.75;color:#a8b8d1;margin:6px 0}.help button{margin-top:6px} .coords{font-variant-numeric:tabular-nums;font-size:11px;color:#7790ae;text-align:right;margin-top:7px}
 </style></head><body><main>
-<header><div><h1>一筆かな <span style="color:#70d9bc">✿</span></h1><small>asobiba ・相対方向フリック実験</small></div><span class="tag">v0.2</span></header>
+<header><div><h1>一筆かな <span style="color:#70d9bc">✿</span></h1><small>asobiba ・相対方向フリック実験</small></div><span class="tag">v0.3</span></header>
 <div id="output" class="output empty">ここに文章が表示されます</div>
 <div class="toolbar"><button id="back">⌫ 戻す</button><button id="space">空白</button><button id="enter">改行</button><button id="recal">方角を再設定</button><button id="clear">消去</button></div>
 <div class="canvas-wrap">
 <div class="status"><div><strong id="stage">右にまっすぐ線を引く</strong><small id="detail">最初の一度だけ方角を登録</small></div><div class="selected" id="selected">→</div></div>
 <canvas id="pad" aria-label="一筆かな入力エリア"></canvas>
-<div class="caption" id="note">指の周囲に次の選択肢が表示されます</div>
+<div class="caption" id="note">左上の窓に次の選択肢を表示します</div>
 </div>
 <div class="help"><strong>試作版の入力規則</strong>
 <p>① 最初に右へ直線を引いて基準方向を決める。途中でも、<b>直線だけ</b>を描いて指を離すと、その線の方向に再設定。</p>
 <p>② 次の一筆は、基準方向に対して<b>上</b>が「あかさたな」、<b>下</b>が「はまやらわ」。そのあと<b>曲がる</b>ことで行を選択。</p>
 <p>③ 曲がった先の進行方向を新しい基準として、母音の5枚の花びらが回る。<b>そこで離せば「あ段」</b>。さらに曲がれば「い・う・え・お」などを選ぶ。</p>
-<p>花びらの角度は進行方向に対して <b>左60°・左120°・逆戻り180°・右120°・右60°</b>。直進は選択肢なし。移動距離で文字が変わったり、次の段階に進んだりはしません。</p>
-<p>※ 今は入力方式の実験なので、記号・濁点・小文字は未実装。母音の5択は「あ・い・う・え・お」の順。</p><div class="coords" id="debug"></div>
+<p>花びらの角度は進行方向に対して <b>左75°・左135°・逆戻り180°・右135°・右75°</b>。直進は選択肢なし。移動距離で文字が変わったり、次の段階に進んだりはしません。</p>
+<p>※ 角度変化約63°以上と方向の安定を確認して曲がり角を判定します。花びらは左上に固定表示。移動距離で選択は変わりません。<br>※ 今は入力方式の実験なので、記号・濁点・小文字は未実装。母音の5択は「あ・い・う・え・お」の順。</p><div class="coords" id="debug"></div>
 </div></main>
 <script>
 (()=>{'use strict';
 const canvas=document.getElementById('pad'),ctx=canvas.getContext('2d'),$=s=>document.getElementById(s);
 const ROWS=[['あ','か','さ','た','な'],['は','ま','や','ら','わ']];
 const TABLE=[['あ','い','う','え','お'],['か','き','く','け','こ'],['さ','し','す','せ','そ'],['た','ち','つ','て','と'],['な','に','ぬ','ね','の'],['は','ひ','ふ','へ','ほ'],['ま','み','む','め','も'],['や','','ゆ','','よ'],['ら','り','る','れ','ろ'],['わ','を','ん','ー','、']];
-const PETALS=[{angle:-120,index:0},{angle:-60,index:1},{angle:180,index:2},{angle:60,index:3},{angle:120,index:4}];
+const PETALS=[{angle:-135,index:0},{angle:-75,index:1},{angle:180,index:2},{angle:75,index:3},{angle:135,index:4}];
+const GROUP_THRESHOLD=deg(64),BEND_THRESHOLD=deg(63),STABLE_SAMPLES=5;
 let north=null,output='',stroke=null,tip=null,phase='calibrate',group=null,row=null,vowel=null,incoming=null,segments=[],nextCandidates=[],pending=null,directions=[],lastStable=null;
 const PI=Math.PI,deg=x=>x*PI/180,radToDeg=x=>Math.round(x*180/PI),norm=a=>Math.atan2(Math.sin(a),Math.cos(a)),heading=(a,b)=>Math.atan2(-(b.y-a.y),b.x-a.x);
 const unit=(a,b)=>({x:Math.cos(a)*b,y:-Math.sin(a)*b}),direction=(a,b)=>Math.atan2(Math.sin(a)+Math.sin(b),Math.cos(a)+Math.cos(b));
@@ -39,9 +40,24 @@ function roundedPetal(x,y,a,label){ctx.save();ctx.translate(x,y);ctx.rotate(-a);
 function draw(){const{w,h}=dprSetup();ctx.clearRect(0,0,w,h);ctx.strokeStyle='rgba(132,154,192,.085)';ctx.lineWidth=1;for(let x=20;x<w;x+=36){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}for(let y=10;y<h;y+=36){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}
 if(north!==null){ctx.save();ctx.translate(w-33,30);ctx.rotate(-north);ctx.strokeStyle='#75d9c5';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-16,0);ctx.lineTo(14,0);ctx.lineTo(7,-6);ctx.moveTo(14,0);ctx.lineTo(7,6);ctx.stroke();ctx.restore()}
 if(stroke?.points.length){const p=stroke.points;ctx.lineWidth=5;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#78d9d3';ctx.beginPath();ctx.moveTo(p[0].x,p[0].y);for(let i=1;i<p.length;i++)ctx.lineTo(p[i].x,p[i].y);ctx.stroke();for(const q of segments){ctx.fillStyle='#f4b5d1';ctx.beginPath();ctx.arc(q.x,q.y,5,0,2*PI);ctx.fill()}}
-if(tip){const labels=currentLabels(),base=incoming;if(labels&&base!==null){const petals=PETALS.map(p=>({...p,label:labels[p.index]}));for(const p of petals){const a=base+deg(p.angle);roundedPetal(tip.x,tip.y,a,p.label)}}
-ctx.beginPath();ctx.arc(tip.x,tip.y,11,0,2*PI);ctx.fillStyle='#77dcd2';ctx.fill();ctx.strokeStyle='#ffffff';ctx.lineWidth=2;ctx.stroke();
-if(incoming!==null){const v=unit(incoming,28);ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(tip.x,tip.y);ctx.lineTo(tip.x+v.x,tip.y+v.y);ctx.stroke()}}
+// Fixed upper-left flower preview, independent of fingertip location.
+{
+const px=10,py=10,bw=186,bh=195,cx=px+bw/2,cy=py+112;
+ctx.save();ctx.fillStyle='rgba(8,15,28,.94)';ctx.strokeStyle='rgba(123,152,190,.65)';ctx.lineWidth=1;ctx.beginPath();ctx.roundRect(px,py,bw,bh,15);ctx.fill();ctx.stroke();
+ctx.fillStyle='#a6bedc';ctx.font='12px sans-serif';ctx.textAlign='center';ctx.fillText('次の方向',cx,py+20);
+const labels=currentLabels(),base=incoming;
+if(labels&&base!==null){
+ ctx.save();ctx.translate(cx,cy);ctx.scale(.72,.72);
+ for(const pet of PETALS){roundedPetal(0,0,base+deg(pet.angle),labels[pet.index]);}
+ ctx.restore();
+ ctx.fillStyle='#82e5d4';ctx.beginPath();ctx.arc(cx,cy,7,0,2*PI);ctx.fill();
+ const v=unit(base,20);ctx.strokeStyle='#80e5d3';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+v.x,cy+v.y);ctx.stroke();
+}else{
+ ctx.fillStyle='#9bb0ce';ctx.font='12px sans-serif';ctx.textAlign='center';ctx.fillText(north===null?'直線で方角を設定':'方向を選択中',cx,cy);
+}
+ctx.fillStyle='#8da4bf';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText('来た方向を基準に回転',cx,py+bh-12);ctx.restore();
+}
+if(tip){ctx.beginPath();ctx.arc(tip.x,tip.y,8,0,2*PI);ctx.fillStyle='#77dcd2';ctx.fill();ctx.strokeStyle='#ffffff';ctx.lineWidth=1.5;ctx.stroke()}
 else if(north===null){ctx.fillStyle='#9fb2d5';ctx.font='14px sans-serif';ctx.textAlign='center';ctx.fillText('→ 最初に直線を描いてください',w/2,h/2)}else {ctx.fillStyle='#8fa1be';ctx.font='14px sans-serif';ctx.textAlign='center';ctx.fillText('ここから指を動かす',w/2,h/2)}
 }
 function nearestPetal(delta){let best=0,dist=Infinity;for(const pet of PETALS){const diff=Math.abs(norm(delta-deg(pet.angle)));if(diff<dist){best=pet.index;dist=diff}}return best}
@@ -51,7 +67,7 @@ const recent=stroke.angles.slice(-3);const newAngle=averageAngles(recent);
 if(phase==='calibrate'){draw();return}
 if(phase==='group'){
  const delta=norm(newAngle-north),d=Math.abs(delta);
- if(d>deg(38)){group=delta>0?0:1;phase='row';incoming=newAngle;stroke.baseline=newAngle;stroke.lastSelectionIndex=pts.length-1;segments.push({...p});}
+ if(d>GROUP_THRESHOLD){group=delta>0?0:1;phase='row';incoming=newAngle;stroke.baseline=newAngle;stroke.lastSelectionIndex=pts.length-1;segments.push({...p});}
  setText();draw();return;
 }
 if(phase==='row'||phase==='vowel'){
@@ -59,11 +75,11 @@ if(phase==='row'||phase==='vowel'){
  // Compare new tangent to the direction entering this branch.
  const delta=norm(newAngle-incoming),abs=Math.abs(delta);
  // Ignore straight travel. Selection depends only on direction of turning.
- if(abs<deg(38)){pending=null;draw();return}
+ if(abs<BEND_THRESHOLD){pending=null;draw();return}
  const idx=nearestPetal(delta);
  if(!pending||pending.idx!==idx){pending={idx,frames:1}}else{pending.frames++}
  // Require angular consistency across events, not distance traveled.
- if(pending.frames>=3){
+ if(pending.frames>=STABLE_SAMPLES){
   const picked=pending.idx;
   if(phase==='row'){row=picked;phase='vowel';}else{vowel=picked;phase='complete'}
   incoming=newAngle;stroke.lastSelectionIndex=pts.length-1;segments.push({...p});stroke.bends++;pending=null;setText();
