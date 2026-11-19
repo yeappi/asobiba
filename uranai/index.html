@@ -35,6 +35,9 @@ h1{font-family:var(--serif);font-weight:600;font-size:24px;line-height:1.5;lette
 .field label{display:block;font-size:12px;color:var(--mute);margin-bottom:6px;letter-spacing:.1em}
 .field input{width:100%;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:12px;padding:14px;color:var(--ink);font-size:16px;font-family:var(--sans)}
 .field input:focus{outline:none;border-color:var(--gold)}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.seg button{border:1px solid var(--line);border-radius:12px;padding:12px 0;font-size:13px;color:var(--mute);background:rgba(255,255,255,.04)}
+.seg button.on{background:var(--gold);color:#2a1d05;border-color:var(--gold);font-weight:700}
 .err{color:var(--pink);font-size:12px;margin-top:10px;min-height:1em}
 .btn{display:block;width:100%;margin-top:22px;padding:16px;border-radius:14px;font-weight:700;letter-spacing:.15em;
   background:linear-gradient(135deg,#f4d98b,#d9a94a);color:#2a1d05;box-shadow:0 8px 30px rgba(232,200,114,.25)}
@@ -146,6 +149,21 @@ details[open] summary::after{content:"－"}
 .gb-row b{font-weight:500;text-align:right}
 .gb-row.on{color:var(--ink)}.gb-row.on em{background:var(--gold)}
 .sh-note{font-size:11px;color:var(--dim);line-height:1.7;margin-top:12px}
+
+.rh{color:var(--mute);font-size:12px}
+.persona{font-family:var(--serif);font-size:14px;line-height:1.9;margin-top:12px;padding:10px 12px;border-left:2px solid var(--gold);background:rgba(232,200,114,.06);border-radius:0 10px 10px 0}
+.cat{margin-top:12px}
+.cat-h{font-size:12px;color:var(--gold);letter-spacing:.1em}
+.cat-h em{font-style:normal;color:var(--mute);margin-left:6px;font-size:11px}
+.cat-h i{font-style:normal;font-size:10px;color:#2a1d05;background:var(--gold);border-radius:99px;padding:1px 7px;margin-left:6px}
+.cat p{font-size:13px;line-height:1.8;margin-top:4px}
+.sh-box .cat{border-top:1px solid rgba(255,255,255,.06);padding-top:10px}
+.cats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px;text-align:left}
+.cats div{background:rgba(255,255,255,.04);border-radius:12px;padding:10px}
+.cats span{display:block;font-size:11px;color:var(--mute)}
+.cats b{display:block;color:var(--gold);font-size:14px;letter-spacing:2px;margin-top:3px}
+.cats s{text-decoration:none;color:rgba(255,255,255,.15)}
+.cats small{display:block;font-size:10px;color:var(--dim);margin-top:2px}
 .foot{text-align:center;color:var(--dim);font-size:11px;margin-top:22px;line-height:1.8}
 </style>
 </head>
@@ -164,6 +182,7 @@ details[open] summary::after{content:"－"}
     <div class="field"><label>おなまえ</label><input id="inName" maxlength="20" placeholder="やぴ" autocomplete="nickname"></div>
     <div class="field"><label>よみがな（ひらがな）</label><input id="inKana" maxlength="30" placeholder="やぴ"></div>
     <div class="field"><label>生年月日</label><input id="inBirth" type="date" min="1900-01-01" max="2099-12-31"></div>
+    <div class="field"><label>性別</label><div class="seg" id="inGender"><button data-v="f">女性</button><button data-v="m">男性</button><button data-v="x">そのほか</button><button data-v="n">答えない</button></div></div>
     <div class="err" id="err"></div>
     <button class="btn" id="saveBtn">はじめる</button>
     <button class="btn ghost" id="cancelBtn" hidden>もどる</button>
@@ -472,17 +491,81 @@ function diceScore(d){
   return{s:30+(sum-3)*4,...(sum>=14?{h:'勢いのある目',b:'大きな目が出ています。積極的な行動が報われる日。'}:sum>=9?{h:'安定した目',b:'まんなかの目。いつものペースで十分うまくいく。'}:{h:'控えめな目',b:'小さな目の日。準備と休息に向いている。'})};
 }
 
+function hashStr(str){let h=2166136261;for(const ch of str){h^=ch.codePointAt(0);h=Math.imul(h,16777619)}return h}
+/* ========== 読み解きエンジン（バーナム型） ==========
+   占いの結果(上位%)で「良・中・控えめ」を決め、あなたの性格の一文＋4つの運を組み立てる。
+   {相手}{時間}{場所}{人}{数} は日付・名前・占いごとに決まる具体的な手がかり。 */
+const CATS=['恋愛','仕事','お金','人間関係'];
+const CAT_ICON={恋愛:'♡',仕事:'◆',お金:'◎',人間関係:'❋'};
+const PERSONA=['あなたは人前では明るく見せるけれど、本当はひとりで考えこむ時間も大切にする人。','周りに合わせるのが上手なぶん、自分の本音をあと回しにしがちなところがあります。','一度決めたら粘り強いのに、始める前にはつい迷ってしまうタイプ。','人の気持ちの変化にすぐ気づける、繊細なアンテナを持っています。','表には出さないけれど、内側には「このままでは終わらない」という強い気持ちがある人。','頼られると断れないやさしさが、あなたの魅力であり、ときどき疲れの原因にも。','自由でいたい気持ちと、安心したい気持ちのあいだで揺れることがあるはず。','初対面では少し慎重。でも打ち解けた相手には、驚くほど素直な一面を見せます。','自分ではまだ気づいていない才能が、人から見るとはっきり見えているタイプ。','完璧を目指すあまり、できたことより足りないところに目が向きやすい人。','笑っていても、心のどこかで次のことを考えている、頭の回転の速い人。','過去のある出来事が、今のあなたの価値観を大きく形づくっています。','誰かの役に立てたと感じた瞬間に、いちばん力が湧いてくる人。','最近「このままでいいのかな」と考えることが増えていませんか。それは変わる準備ができた合図です。','人には見せない努力を、ちゃんと積み重ねてきた人。その積み重ねが報われる時期に入っています。','直感が鋭いのに、理屈で打ち消してしまうことがあるはず。今日は直感を信じて。'];
+const LINES={
+ 恋愛:[
+  ['{相手}のほうから、あなたに意識を向けている気配があります。{時間}のやりとりに、ちょっとした本音がにじむかも。','最近ふと思い出す人がいるなら、それは偶然ではありません。今日は距離が縮まりやすい日。','{場所}で、思いがけない出会いや再会の予感。いつもより少しだけ身だしなみに気をつけて。','あなたの何気ないひと言が、{相手}の心に長く残りそうです。素直な言葉ほど効きます。','返事を待っている相手がいるなら、{時間}ごろに動きがありそう。焦らず待つのが正解。','恋の流れが動き出す日。{人}との会話が、思った以上に盛り上がります。'],
+  ['{相手}との関係は、今は「育てる時期」。小さな気づかいをひとつ足すと、印象がぐっと良くなります。','恋愛運は穏やか。大きな進展より、いつものやりとりの心地よさを大切にして。','{相手}の前で、無理にキャラを作らなくて大丈夫。自然体のあなたに惹かれる人がいます。','{時間}に送るメッセージは、いつもより短めがちょうどいい。余白が相手の想像をふくらませます。','昔の恋を思い出すことがあっても、それは前に進むための整理。気持ちが軽くなっていきます。','今日は自分を大切にすることが、いちばんの恋愛運アップ。好きなものに囲まれて。'],
+  ['{相手}の言葉の裏を読みすぎてしまいそう。今日は文字どおりに受け取るくらいでちょうどいい。','恋愛はひと休みの日。追いかけるより、自分の時間を楽しむほうが魅力が増します。','すれ違いを感じても、それは一時的なもの。明日以降に話すほうがうまく伝わります。','気持ちが揺れやすい日。大事な返事は、ひと晩おいてからで大丈夫。','人と比べてしまいやすい日。あなたにはあなたにしかない魅力があります。','今日は恋より、友達との時間が心を満たしてくれそう。']],
+ 仕事:[
+  ['あなたの得意なことが、思わぬ場面で評価されそう。{時間}に声をかけられたら、それはチャンスです。','後回しにしていた作業に手をつけると、驚くほどスムーズに進みます。','{人}からの頼まれごとが、次のチャンスにつながる予感。快く引き受けて吉。','ひらめきが冴える日。思いついたアイデアはすぐメモを。あとで大きく化けるかも。','集中力が高い日。{時間}までに大事なことを片付けると、一日がぐっと楽になります。','努力してきたことに結果がつき始める日。小さな成果でも自分をほめて。'],
+  ['仕事や勉強は安定運。目立つ成果より、ミスを減らすことが評価につながります。','やることが多く感じても、ひとつずつで大丈夫。{数}つに分けると一気に進みます。','{人}の意見に、今のあなたに必要なヒントが隠れています。','いつものやり方を少しだけ変えると、思ったより効率が上がります。','急ぎの連絡には、ひと呼吸おいてから返すのが正解。言葉選びが評価を左右します。','今日は準備の日。明日以降の自分を楽にする段取りを整えて。'],
+  ['やる気が出にくい日。完璧を目指さず、6割の出来で出してしまうのが正解。','確認不足のミスに注意。送信する前にもう一度だけ見直して。','人と比べて焦りそうな日。あなたはあなたのペースで進めています。','大きな決断は今日でなくていい。情報を集めるだけで十分な一日。','休むことも仕事のうち。{時間}に5分だけ目を閉じると、頭がすっきりします。','思いどおりに進まなくても、それは軌道修正のサイン。明日はもっと楽に進めます。']],
+ お金:[
+  ['臨時収入や、思いがけず得をする予感。レシートやポイントをよく見て。','欲しかったものが、思ったより安く手に入りそう。{場所}をのぞいてみて。','お金の巡りが良い日。人に少しごちそうすると、何倍にもなって返ってきます。','数字の「{数}」が目に入ったら、金運が動いているサイン。','以前の頑張りが、お金の形になって返ってくる時期に入っています。','財布の中を整えると、さらに金運が上がる日。いらないレシートを捨てて。'],
+  ['金運は安定。大きな買い物より、毎日使うものにお金をかけると満足度が上がります。','ついで買いに注意しつつ、自分へのささやかなご褒美はOK。','お金の使い方を見直すのに良い日。使っていないサブスクがないか確認して。','{人}とのお金の話は、今日はさらっと済ませるのが吉。','節約より「何に使うと嬉しいか」を考えると、自然とお金が残ります。','小銭をきちんとしまうと、運気が落ち着いて整っていきます。'],
+  ['衝動買いしやすい日。カートに入れたら、ひと晩おいてから決めて。','お金の貸し借りは今日は避けて。小さな額でも後で気になります。','出費がかさみそうでも、必要なものなら未来の自分への投資です。','{場所}では、財布のひもを少しだけ締めて。','金運はひと休み。今日はお金を使わずに楽しめることを探して。','数字の見落としに注意。支払いの前に金額をもう一度確認して。']],
+ 人間関係:[
+  ['{人}から、うれしい知らせや誘いが届きそう。','あなたに助けられている人は、思っている以上にいます。今日はそれを実感する出来事が。','久しぶりの人に連絡すると、思った以上に話が弾みます。','今日のあなたは聞き上手。うなずいて聞くだけで、信頼が深まります。','グループの中で、自然とあなたが中心になる日。遠慮せず意見を言って。','{時間}の何気ない会話が、これからの縁につながります。'],
+  ['人間関係は穏やか。無理に盛り上げなくても、いつもどおりで十分。','{人}には、少しだけ丁寧な言葉づかいを意識すると好印象。','誰かに「ありがとう」を伝えると、その日一日の空気がやわらかくなります。','相談されたら、答えを出すより気持ちを聞いてあげるのが正解。','苦手な人とは、今日は距離をとって大丈夫。それが自分を守ることになります。','SNSより、直接話すほうが気持ちが伝わる日。'],
+  ['言葉が強く伝わりやすい日。冗談のつもりでも、ひと言多くならないように。','人に合わせすぎて疲れそう。断ることも、やさしさのひとつです。','誤解されたと感じても、今日は言い訳しないほうがうまくいきます。','ひとりの時間を作ると、人間関係のもやもやが整理されます。','{人}の言葉に振り回されそうな日。気にしすぎないで。','グループの話題には、今日は聞き役に回るのが吉。']]};
+const CUE={時間:['朝の身支度の時間','昼休み','午後3時前後','夕方','夜9時ごろ','寝る前','移動中'],場所:['駅の近く','コンビニ','いつもと違うお店','通い慣れた道の途中','本屋','カフェ'],人:['年上の人','名前に「か行」の音が入る人','久しぶりに連絡をくれる人','いつもはあまり話さない人','同い年くらいの人','名前に「さ行」の音が入る人','身近な家族'],数:['3','4','5','7','8','9']};
+const PARTNER={f:'気になる彼',m:'気になる彼女',x:'気になるあの人',n:'気になるあの人'};
+// 結果そのものが分野を強く示すもの
+function focusOf(x){
+  const r=x.r.r,id=x.f.id;
+  if(id==='cards')return['恋愛','お金','仕事','人間関係'][SUIT.indexOf(r[0])];
+  if(id==='tarot'){if(/恋人|女帝|星|月/.test(r))return'恋愛';if(/魔術師|皇帝|戦車|正義|審判/.test(r))return'仕事';if(/運命の輪|世界/.test(r))return'お金';if(/太陽|法王|節制/.test(r))return'人間関係'}
+  if(id==='rune'){if(/フェフ|ヤラ|オセル/.test(r))return'お金';if(/ギューフ|ウンジョー/.test(r))return'恋愛';if(/マンナズ|エワズ/.test(r))return'人間関係';if(/テイワズ|ケナズ|ウルズ/.test(r))return'仕事'}
+  if(id==='bio'){const v=r.match(/-?\+?\d+/g).map(Number),i=v.indexOf(Math.max(...v));return['仕事','恋愛','仕事'][i]}
+  return null;
+}
+const bandOf=p=>p<=.25?0:p<=.6?1:2;
+function fill(t,rnd,gender){return t.replace(/\{相手\}/g,PARTNER[gender]||PARTNER.n).replace(/\{(時間|場所|人|数)\}/g,(_,k)=>CUE[k][Math.floor(rnd()*CUE[k].length)])}
+// 1つの占い結果の読み解き
+function reading(x,profile,dayKey,idx){
+  const rnd=mulberry(hashStr(dayKey+profile.name+x.f.id+x.r.r));
+  const base=bandOf(x.pct);
+  const focus=x.focus;
+  const cats={};
+  for(const c of CATS){
+    let b=base;if(c!==focus){const j=rnd();b=Math.max(0,Math.min(2,base+(j<.3?-1:j>.75?1:0)))}
+    const pool=LINES[c][b];cats[c]={band:b,text:fill(pool[Math.floor(rnd()*pool.length)],rnd,profile.gender)};
+  }
+  return{persona:PERSONA[Math.floor(rnd()*PERSONA.length)],focus,cats};
+}
+// 全占いに注目分野を割り当てる（結果で決まらないものは、その日ごとに4分野へ均等に配る）
+function assignFocus(rows,dayKey,name){
+  const rnd=mulberry(hashStr(dayKey+name+'focus'));const free=[];
+  for(const x of rows){x.focus=focusOf(x);if(!x.focus)free.push(x)}
+  const cnt=Object.fromEntries(CATS.map(c=>[c,rows.filter(x=>x.focus===c).length]));
+  free.sort(()=>rnd()-.5);
+  for(const x of free){const min=Math.min(...CATS.map(c=>cnt[c]));const cand=CATS.filter(c=>cnt[c]===min);x.focus=cand[Math.floor(rnd()*cand.length)];cnt[x.focus]++}
+}
+// 分野ごとの今日の運：その分野を担当する占いのうち、いちばん良かったもの
+function catLuck(rows){
+  return CATS.map(c=>{const best=rows.filter(x=>x.focus===c).sort((a,b)=>a.pct-b.pct)[0];
+    const st=best.pct<=.05?5:best.pct<=.15?4:best.pct<=.35?3:best.pct<=.6?2:1;return{c,best,st}});
+}
+
 /* ========== 抽選の評価 ========== */
 function evaluate(profile,today,table){
   const c={p:profile,today,t:table};
   const rows=FORTUNES.map(f=>{const r=f.run(c),dist=f.dist(c),pct=topPct(dist,r.s);return{f,r,dist,pct,g:gradeOf(pct,r.s,dist)}});
   rows.sort((a,b)=>a.pct-b.pct||b.r.s-a.r.s);
+  const dk=keyOf(today);assignFocus(rows,dk,profile.name);rows.forEach((x,i)=>x.rd=reading(x,profile,dk,i));
   // 総合：全占いの点数合計が、ありうる日々の中で上位何%か（モンテカルロ）
   const total=rows.reduce((a,x)=>a+x.r.s,0);
   const rnd=mulberry(table.reduce((a,x,i)=>a*31+x+i|0,7));
   const N=20000;let ge=0;
   for(let i=0;i<N;i++){let s=0;for(const x of rows)s+=sample(x.dist,rnd());if(s>=total-1e-9)ge++}
-  return{rows,total,totalPct:ge/N,good:rows.filter(x=>x.pct<=.10).length};
+  return{rows,total,totalPct:ge/N,good:rows.filter(x=>x.pct<=.10).length,cats:catLuck(rows)};
 }
 
 /* ========== 画面 ========== */
@@ -493,15 +576,20 @@ function refreshChip(){const b=$('#profileBtn');if(db.profile){b.hidden=false;b.
 function openOnboard(edit){
   show('onboard');$('#err').textContent='';
   $('#cancelBtn').hidden=!edit;$('#saveBtn').textContent=edit?'保存する':'はじめる';
-  if(edit&&db.profile){$('#inName').value=db.profile.name;$('#inKana').value=db.profile.kana;$('#inBirth').value=db.profile.birthStr}
+  if(edit&&db.profile){$('#inName').value=db.profile.name;$('#inKana').value=db.profile.kana;$('#inBirth').value=db.profile.birthStr;setGender(db.profile.gender)}
+  if(db.profile&&!db.profile.gender)$('#err').textContent='性別の項目が増えました。選んで保存してください';
 }
+let GENDER='';
+function setGender(v){GENDER=v||'';[...$('#inGender').children].forEach(b=>b.classList.toggle('on',b.dataset.v===GENDER))}
+$('#inGender').onclick=e=>{const b=e.target.closest('button');if(b)setGender(b.dataset.v)};
 $('#saveBtn').onclick=()=>{
   const name=$('#inName').value.trim(),kana=toHira($('#inKana').value.trim()),b=$('#inBirth').value;
   if(!name)return $('#err').textContent='おなまえを入れてください';
   if(!kana||!kanaNum(kana))return $('#err').textContent='よみがなをひらがなで入れてください';
   if(!/^\d{4}-\d{2}-\d{2}$/.test(b))return $('#err').textContent='生年月日を入れてください';
   if(jdn(parseYMD(b))>jdn(today))return $('#err').textContent='未来の日付は選べません';
-  db.profile={name,kana,birthStr:b};persist();refreshChip();route();
+  if(!GENDER)return $('#err').textContent='性別を選んでください（答えないも選べます）';
+  db.profile={name,kana,birthStr:b,gender:GENDER};persist();refreshChip();route();
 };
 $('#cancelBtn').onclick=()=>route();
 $('#profileBtn').onclick=()=>openOnboard(true);
@@ -510,6 +598,7 @@ function profileObj(){const p=db.profile;return{...p,birth:parseYMD(p.birthStr)}
 function route(){
   refreshChip();
   if(!db.profile)return openOnboard(false);
+  if(!db.profile.gender)return openOnboard(true);
   if(db.draws[TKEY])return renderResult(false);
   show('home');
   $('#homeDate').textContent=fmtDate(today);$('#homeName').textContent=db.profile.name;
@@ -531,7 +620,6 @@ function playOverlay(done){
 }
 
 let EV=null;
-function hashStr(str){let h=2166136261;for(const ch of str){h^=ch.codePointAt(0);h=Math.imul(h,16777619)}return h}
 function renderResult(animate){
   show('result');
   const d=db.draws[TKEY],ev=EV=evaluate(profileObj(),today,d.table);
@@ -543,10 +631,10 @@ function renderResult(animate){
       <div class="rk"><span class="no">${i+1}位</span></div>
       <div class="fname">${x.f.name}<span class="origin">${x.f.origin}</span></div>
       <div class="grade g-${x.g}">${x.g}</div>
-      <div class="res">${x.r.r}</div>
-      <div class="hd">${x.r.h}</div>
-      <div class="msg">${x.r.b}</div>
-      <div class="more">くわしく見る ›</div>
+      <div class="res">${x.r.r}<span class="rh">　${x.r.h}</span></div>
+      ${i===0?`<p class="persona">${x.rd.persona}</p>`:''}
+      <div class="cat"><div class="cat-h">${CAT_ICON[x.focus]} 今日の${x.focus}運</div><p>${x.rd.cats[x.focus].text}</p></div>
+      <div class="more">恋愛・仕事・お金・人間関係をすべて見る ›</div>
     </div>`).join('');
   const tg=grade(ev.totalPct);
   const rnd=mulberry(hashStr(TKEY+db.profile.name+d.table.join('')));
@@ -556,6 +644,7 @@ function renderResult(animate){
     <div class="big">上位 <em>${fmtPct(ev.totalPct)}%</em> の幸運日</div>
     <div class="small">総合ランク「${tg}」／ 上位10%以内の占いが <b style="color:var(--gold)">${ev.good}個</b></div>
     <div class="meter"><i></i></div>
+    <div class="cats">${ev.cats.map(k=>`<div class="tap" data-i="${ev.rows.indexOf(k.best)}"><span>${CAT_ICON[k.c]} ${k.c}運</span><b>${'★'.repeat(k.st)}<s>${'★'.repeat(5-k.st)}</s></b><small>決め手：${k.best.f.name}</small></div>`).join('')}</div>
     <div class="lucky"><div><span>ラッキーカラー</span><b>${lc}</b></div><div><span>ラッキーアクション</span><b>${la}</b></div></div>`;
   $('#allList').innerHTML=ev.rows.map((x,i)=>`
     <div class="row tap" data-i="${i}"><div class="n">${i+1}</div>
@@ -587,6 +676,8 @@ function openSheet(x,rank){
       <div class="res">${x.r.r}</div>
       <div class="hd">${x.r.h}</div>
       <div class="msg">${x.r.b}</div>
+      <p class="persona">${x.rd.persona}</p>
+      ${CATS.map(c=>`<div class="cat${c===x.focus?' main':''}"><div class="cat-h">${CAT_ICON[c]} ${c}運 <em>${['好調','ふつう','ひかえめ'][x.rd.cats[c].band]}</em>${c===x.focus?'<i>この占いが担当</i>':''}</div><p>${x.rd.cats[c].text}</p></div>`).join('')}
     </div>
     <div class="sh-lbl">どうやって出たか</div>
     <p class="sh-how">${x.r.w}</p>
