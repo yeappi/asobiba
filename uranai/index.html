@@ -205,6 +205,7 @@ details[open] summary::after{content:"－"}
     <button class="btn" id="drawBtn">占う</button>
     <p class="foot" id="homeStreak"></p>
     <p class="foot">1日1回。結果は今日の終わりまで変わりません。</p>
+    <button class="linkBtn" id="resetLinkH">リセット</button>
   </section>
 
   <!-- 結果 -->
@@ -223,6 +224,7 @@ details[open] summary::after{content:"－"}
       <div id="devBox" hidden><div class="how">開発用：<code>?dev&amp;date=2026-12-24</code> でその日として占えます。</div><div class="dev"><button id="redrawBtn">今日を引き直す</button></div></div>
     </details>
     <button class="btn ghost" id="toTopBtn">トップに戻る</button>
+    <button class="linkBtn" id="resetLinkR">リセット</button>
     <p class="foot">明日になると、新しい運勢が届きます。<br>占いは楽しみとしてお読みください。</p>
   </section>
 </div>
@@ -1100,6 +1102,27 @@ async function openShare(){
   $('#sheet').classList.add('on');$('#sheetPanel').scrollTop=0;
 }
 
+/* リセット */
+function openReset(){
+  const drawn=!!db.draws[TKEY];
+  $('#sheetBody').innerHTML=`
+    <div class="sh-lbl" style="margin-top:4px">リセット</div>
+    <p class="sh-about">どちらをリセットしますか？</p>
+    ${drawn?'<button class="btn" id="rsToday">今日の結果をリセットして引き直す</button><p class="sh-note">今日の結果が消えて、トップから新しく占えます。名前や過去の記録は残ります。</p>':''}
+    <button class="btn ghost" id="rsAll">すべてのデータを消す</button>
+    <p class="sh-note">名前・生年月日・これまでの結果と連続日数がすべて消えて、最初の入力画面に戻ります。</p>`;
+  if(drawn)$('#rsToday').onclick=()=>{
+    if(!confirm('今日の結果を消して、引き直しますか？'))return;
+    delete db.draws[TKEY];persist();closeSheet();route();
+  };
+  $('#rsAll').onclick=()=>{
+    if(!confirm('名前・生年月日・これまでの結果をすべて消します。よろしいですか？'))return;
+    try{localStorage.removeItem(STORE)}catch(e){}
+    db={draws:{}};closeSheet();route();
+  };
+  $('#sheet').classList.add('on');$('#sheetPanel').scrollTop=0;
+}
+$('#resetLinkR').onclick=openReset;$('#resetLinkH').onclick=openReset;
 $('#shareBtn').onclick=openShare;
 
 /* 星空 */
