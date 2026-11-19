@@ -205,6 +205,7 @@ details[open] summary::after{content:"－"}
     <div class="secT">今日のいちばん</div>
     <div id="top3"></div>
     <div class="total" id="total"></div>
+    <button class="btn" id="shareBtn" style="margin-top:0">結果を画像でシェア</button>
     <details id="allBox"><summary>すべての占い結果（タップで詳しく）</summary><div class="list" id="allList"></div></details>
     <details id="howBox"><summary>しくみと乱数表</summary>
       <div class="how" id="howText"></div>
@@ -833,6 +834,8 @@ function reading(x,profile,dayKey,avoid,stored){
 }
 // top3で目に入る文（1位の性格の一文と、top3の担当分野の文）
 function shownKeys(rows){const k=[];rows.slice(0,3).forEach((x,i)=>{const pk=x.rd.picks;if(i===0)k.push('p'+pk.p);const[b,j]=pk.c[x.focus];k.push(x.focus+b+':'+j)});return k}
+// top3は別々の分野にする（2位・3位が上位と同じなら、まだ出ていない分野へ振り替え）
+function diversifyTop(rows){const used=new Set();for(const x of rows.slice(0,3)){if(used.has(x.focus))x.focus=CATS.find(c=>!used.has(c));used.add(x.focus)}}
 // 全占いに注目分野を割り当てる（結果で決まらないものは、その日ごとに4分野へ均等に配る）
 function assignFocus(rows,dayKey,name){
   const rnd=mulberry(hashStr(dayKey+name+'focus'));const free=[];
@@ -852,7 +855,7 @@ function evaluate(profile,today,table,opt={}){
   const c={p:profile,today,t:table};
   const rows=FORTUNES.map(f=>{const r=f.run(c),dist=f.dist(c),pct=topPct(dist,r.s);return{f,r,dist,pct,g:gradeOf(pct,r.s,dist)}});
   rows.sort((a,b)=>a.pct-b.pct||b.r.s-a.r.s);
-  const dk=keyOf(today);assignFocus(rows,dk,profile.name);const avoid=new Set(opt.avoid||[]);rows.forEach(x=>x.rd=reading(x,profile,dk,avoid,opt.picks&&opt.picks[x.f.id]));
+  const dk=keyOf(today);assignFocus(rows,dk,profile.name);diversifyTop(rows);const avoid=new Set(opt.avoid||[]);rows.forEach(x=>x.rd=reading(x,profile,dk,avoid,opt.picks&&opt.picks[x.f.id]));
   // 総合：全占いの点数合計が、ありうる日々の中で上位何%か（モンテカルロ）
   const total=rows.reduce((a,x)=>a+x.r.s,0);
   const rnd=mulberry(table.reduce((a,x,i)=>a*31+x+i|0,7));
@@ -935,7 +938,7 @@ function renderResult(animate){
     </div>`).join('');
   const tg=grade(ev.totalPct);
   const rnd=mulberry(hashStr(TKEY+db.profile.name+d.table.join('')));
-  const lc=LUCKY_COLOR[Math.floor(rnd()*LUCKY_COLOR.length)],la=LUCKY_ACT[Math.floor(rnd()*LUCKY_ACT.length)];
+  const lc=LUCKY_COLOR[Math.floor(rnd()*LUCKY_COLOR.length)],la=LUCKY_ACT[Math.floor(rnd()*LUCKY_ACT.length)];ev.lucky={color:lc,act:la};
   $('#total').innerHTML=`
     <div class="small">全${ev.rows.length}の占いをあわせた今日の運</div>
     <div class="big">上位 <em>${fmtPct(ev.totalPct)}%</em> の幸運日</div>
@@ -999,6 +1002,81 @@ function renderHow(table){
 $('#replayBtn').onclick=()=>{window.scrollTo(0,0);playOverlay(()=>renderResult(true))};
 $('#redrawBtn').onclick=()=>{delete db.draws[TKEY];persist();window.scrollTo(0,0);route()};
 $('#wipeBtn').onclick=()=>{if(!confirm('名前・生年月日・履歴をすべて消しますか？'))return;try{localStorage.removeItem(STORE)}catch(e){}db={draws:{}};route()};
+
+/* ========== シェア画像 ========== */
+const SERIF_C='"Hiragino Mincho ProN","Yu Mincho","YuMincho","Noto Serif JP",serif';
+const SANS_C='"Hiragino Sans","Yu Gothic","Noto Sans JP",sans-serif';
+function wrapText(ctx,text,x,y,maxW,lh,maxLines){
+  let line='',lines=[];
+  for(const ch of text){if(ctx.measureText(line+ch).width>maxW){lines.push(line);line=ch}else line+=ch}
+  if(line)lines.push(line);
+  if(lines.length>maxLines){lines=lines.slice(0,maxLines);lines[maxLines-1]=lines[maxLines-1].slice(0,-1)+'…'}
+  lines.forEach((l,i)=>ctx.fillText(l,x,y+i*lh));return lines.length*lh;
+}
+function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+function drawShare(ev){
+  const W=1080,H=1350,cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');
+  // 背景
+  let g=c.createRadialGradient(W/2,-100,50,W/2,-100,1300);g.addColorStop(0,'#2e2468');g.addColorStop(.6,'#140f2c');g.addColorStop(1,'#0b0918');
+  c.fillStyle=g;c.fillRect(0,0,W,H);
+  const rnd=mulberry(hashStr(TKEY));for(let i=0;i<140;i++){c.globalAlpha=.15+rnd()*.5;c.fillStyle='#fff3d0';c.beginPath();c.arc(rnd()*W,rnd()*H,rnd()*2.2+.4,0,7);c.fill()}
+  c.globalAlpha=1;
+  const gold='#e8c872',ink='#f3ecdc',mute='#a89fbf';
+  c.textAlign='center';
+  c.fillStyle=gold;c.font=`600 34px ${SERIF_C}`;c.fillText('せ か い 占 い',W/2,100);
+  c.fillStyle=mute;c.font=`30px ${SERIF_C}`;c.fillText(`${fmtDate(today)}　${db.profile.name} さんの今日のいちばん`,W/2,152);
+  // top3
+  const top=ev.rows.slice(0,3);let y=200;
+  top.forEach((x,i)=>{
+    const h=i===0?330:205;
+    rr(c,70,y,W-140,h,30);
+    if(i===0){const lg=c.createLinearGradient(70,y,W-70,y+h);lg.addColorStop(0,'rgba(255,220,130,.20)');lg.addColorStop(1,'rgba(140,90,210,.16)');c.fillStyle=lg}else c.fillStyle='rgba(255,255,255,.05)';
+    c.fill();c.strokeStyle=i===0?'rgba(255,230,160,.75)':'rgba(232,200,114,.28)';c.lineWidth=i===0?3:2;c.stroke();
+    c.textAlign='left';
+    c.fillStyle=gold;c.font=`600 30px ${SERIF_C}`;c.fillText(`${i+1}位`,110,y+62);
+    c.fillStyle=ink;c.font=`${i===0?40:34}px ${SERIF_C}`;c.fillText(x.f.name,190,y+64);
+    c.textAlign='right';c.fillStyle=mute;c.font=`26px ${SANS_C}`;c.fillText('上位',W-110,y+48);
+    c.fillStyle=ink;c.font=`600 ${i===0?46:38}px ${SERIF_C}`;c.fillText(fmtPct(x.pct)+'%',W-110,y+(i===0?100:92));
+    c.textAlign='left';
+    const gg=c.createLinearGradient(0,y+80,0,y+180);gg.addColorStop(0,'#fff1c1');gg.addColorStop(1,'#e8c872');c.fillStyle=gg;
+    c.font=`700 ${i===0?110:72}px ${SERIF_C}`;c.fillText(x.g,106,y+(i===0?185:140));
+    c.fillStyle=ink;c.font=`${i===0?30:26}px ${SANS_C}`;
+    const line=`${CAT_ICON[x.focus]} ${x.focus}運　${x.rd.cats[x.focus].text}`;
+    wrapText(c,line,110,y+(i===0?240:182),W-220,i===0?42:34,i===0?2:1);
+    y+=h+22;
+  });
+  // 総合
+  c.textAlign='center';
+  c.fillStyle=mute;c.font=`28px ${SANS_C}`;c.fillText(`全${ev.rows.length}の世界の占いをあわせた今日の運`,W/2,y+40);
+  c.fillStyle=ink;c.font=`600 60px ${SERIF_C}`;c.fillText(`上位 ${fmtPct(ev.totalPct)}% の幸運日`,W/2,y+112);
+  // 4つの運
+  y+=150;const cw=(W-140-30)/4;
+  ev.cats.forEach((k,i)=>{const x0=70+i*(cw+10);rr(c,x0,y,cw,110,20);c.fillStyle='rgba(255,255,255,.05)';c.fill();
+    c.fillStyle=mute;c.font=`24px ${SANS_C}`;c.fillText(`${CAT_ICON[k.c]} ${k.c}運`,x0+cw/2,y+40);
+    c.fillStyle=gold;c.font=`30px ${SANS_C}`;c.fillText('★'.repeat(k.st)+'☆'.repeat(5-k.st),x0+cw/2,y+84)});
+  y+=140;
+  c.fillStyle=mute;c.font=`26px ${SANS_C}`;c.fillText(`ラッキーカラー ${ev.lucky.color}　／　${ev.lucky.act}`,W/2,y+10);
+  c.fillStyle='rgba(232,200,114,.7)';c.font=`24px ${SANS_C}`;c.fillText(location.host+location.pathname,W/2,H-40);
+  return cv;
+}
+async function openShare(){
+  if(!EV)return;
+  const cv=drawShare(EV);
+  const blob=await new Promise(r=>cv.toBlob(r,'image/png'));
+  const url=URL.createObjectURL(blob);
+  const file=new File([blob],`sekai-uranai-${TKEY}.png`,{type:'image/png'});
+  const canFile=!!(navigator.canShare&&navigator.canShare({files:[file]}));
+  $('#sheetBody').innerHTML=`
+    <div class="sh-lbl" style="margin-top:4px">シェア用の画像</div>
+    <img src="${url}" alt="今日の占い結果" style="width:100%;border-radius:14px;margin-top:6px;border:1px solid var(--line)">
+    ${canFile?'<button class="btn" id="doShare">シェアする</button>':''}
+    <a class="btn ${canFile?'ghost':''}" id="doSave" href="${url}" download="sekai-uranai-${TKEY}.png" style="text-align:center;text-decoration:none">画像を保存</a>
+    <p class="sh-note">スマホでは画像を長押ししても保存できます。</p>`;
+  if(canFile)$('#doShare').onclick=async()=>{try{await navigator.share({files:[file],text:`今日のいちばんは${EV.rows[0].f.name}で${EV.rows[0].g}！ #せかい占い`})}catch(e){}};
+  $('#sheet').classList.add('on');$('#sheetPanel').scrollTop=0;
+}
+
+$('#shareBtn').onclick=openShare;
 
 /* 星空 */
 (function(){const cv=$('#stars'),x=cv.getContext('2d');let W,H,S=[];
