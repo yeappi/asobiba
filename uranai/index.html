@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d0b1a">
+<title>せかい占い — 今日のいちばん</title>
+<style>
+:root{
+  --bg:#0d0b1a;--bg2:#171331;--ink:#f3ecdc;--mute:#a89fbf;--dim:#6d6588;
+  --gold:#e8c872;--gold2:#fff1c1;--line:rgba(232,200,114,.22);--card:rgba(255,255,255,.045);
+  --pink:#ff9ec7;--sky:#8fd3ff;
+  --serif:"Hiragino Mincho ProN","Yu Mincho","YuMincho","Noto Serif JP",serif;
+  --sans:"Hiragino Sans","Yu Gothic UI","Noto Sans JP",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-tap-highlight-color:transparent}
+body{min-height:100dvh;background:
+  radial-gradient(1200px 600px at 50% -10%,#2a2160 0%,transparent 60%),
+  radial-gradient(800px 500px at 100% 100%,#1d1440 0%,transparent 60%),var(--bg);background-attachment:fixed}
+#stars{position:fixed;inset:0;pointer-events:none;z-index:0}
+#app{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:16px 18px 80px}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.brand{font-family:var(--serif);letter-spacing:.2em;font-size:15px;color:var(--gold)}
+.chip{border:1px solid var(--line);border-radius:99px;padding:6px 12px;font-size:12px;color:var(--mute)}
+.screen{display:none;animation:fade .4s ease}
+.screen.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+h1{font-family:var(--serif);font-weight:600;font-size:24px;line-height:1.5;letter-spacing:.05em}
+.lead{color:var(--mute);font-size:13px;line-height:1.8;margin-top:8px}
+/* form */
+.field{margin-top:18px}
+.field label{display:block;font-size:12px;color:var(--mute);margin-bottom:6px;letter-spacing:.1em}
+.field input{width:100%;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:12px;padding:14px;color:var(--ink);font-size:16px;font-family:var(--sans)}
+.field input:focus{outline:none;border-color:var(--gold)}
+.err{color:var(--pink);font-size:12px;margin-top:10px;min-height:1em}
+.btn{display:block;width:100%;margin-top:22px;padding:16px;border-radius:14px;font-weight:700;letter-spacing:.15em;
+  background:linear-gradient(135deg,#f4d98b,#d9a94a);color:#2a1d05;box-shadow:0 8px 30px rgba(232,200,114,.25)}
+.btn.ghost{background:none;border:1px solid var(--line);color:var(--mute);box-shadow:none;font-weight:500;letter-spacing:.05em;padding:12px}
+/* home */
+.date{font-family:var(--serif);color:var(--mute);font-size:14px;letter-spacing:.1em}
+.orbWrap{display:flex;justify-content:center;margin:34px 0 10px}
+.orb{width:210px;height:210px;border-radius:50%;position:relative;
+  background:radial-gradient(circle at 35% 30%,#fff7da 0%,#f0cf7a 18%,#8a5fd1 55%,#2a1a5e 80%);
+  box-shadow:0 0 60px rgba(232,200,114,.35),inset 0 0 40px rgba(0,0,0,.4);animation:breathe 4s ease-in-out infinite}
+.orb::after{content:"";position:absolute;inset:-14px;border-radius:50%;border:1px dashed var(--line);animation:spin 30s linear infinite}
+@keyframes breathe{50%{transform:scale(1.03);box-shadow:0 0 90px rgba(232,200,114,.5),inset 0 0 40px rgba(0,0,0,.4)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.count{text-align:center;color:var(--mute);font-size:12px;margin-top:14px;letter-spacing:.1em}
+.count b{color:var(--gold);font-size:15px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:14px}
+.tags span{font-size:11px;color:var(--dim);border:1px solid rgba(255,255,255,.08);border-radius:99px;padding:3px 9px}
+/* overlay */
+#overlay{position:fixed;inset:0;z-index:10;display:none;align-items:center;justify-content:center;flex-direction:column;
+  background:rgba(8,6,18,.92);backdrop-filter:blur(6px)}
+#overlay.on{display:flex}
+.ring{width:180px;height:180px;border-radius:50%;border:2px solid transparent;border-top-color:var(--gold);border-right-color:rgba(232,200,114,.4);animation:spin .9s linear infinite;position:absolute}
+.ringBox{position:relative;width:180px;height:180px;display:flex;align-items:center;justify-content:center}
+#flick{font-family:var(--serif);font-size:20px;color:var(--gold2);text-align:center;width:160px}
+#flickSub{margin-top:28px;color:var(--mute);font-size:12px;letter-spacing:.15em}
+.prog{width:200px;height:3px;background:rgba(255,255,255,.08);border-radius:3px;margin-top:12px;overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--gold);transition:width .12s}
+/* result */
+.secT{font-family:var(--serif);font-size:13px;letter-spacing:.3em;color:var(--gold);text-align:center;margin:8px 0 14px}
+.card{position:relative;border:1px solid var(--line);background:var(--card);border-radius:18px;padding:18px 18px 16px;margin-bottom:12px;overflow:hidden;
+  opacity:0;transform:translateY(14px) scale(.98)}
+.card.show{animation:pop .6s cubic-bezier(.2,1.4,.4,1) forwards}
+@keyframes pop{to{opacity:1;transform:none}}
+.card.r1{border-color:rgba(255,230,160,.7);background:linear-gradient(160deg,rgba(255,220,130,.16),rgba(140,90,210,.12));box-shadow:0 0 40px rgba(232,200,114,.18)}
+.card.r1::before{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.18) 50%,transparent 70%);transform:translateX(-100%);animation:shine 2.8s ease 2.4s infinite}
+@keyframes shine{40%,100%{transform:translateX(100%)}}
+.rk{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--mute)}
+.rk .no{font-family:var(--serif);font-size:13px;color:var(--gold);border:1px solid var(--line);border-radius:99px;padding:2px 10px}
+.r1 .rk .no{background:var(--gold);color:#2a1d05;border-color:var(--gold)}
+.fname{font-family:var(--serif);font-size:19px;margin-top:10px}
+.origin{font-size:11px;color:var(--dim);margin-left:6px}
+.grade{font-family:var(--serif);font-weight:700;font-size:32px;letter-spacing:.1em;margin-top:4px;
+  background:linear-gradient(180deg,var(--gold2),var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
+.r1 .grade{font-size:42px}
+.g-超大吉{background:linear-gradient(90deg,#ffe6a0,#ff9ec7,#a9d8ff,#ffe6a0);background-size:300%;-webkit-background-clip:text;background-clip:text;animation:rainbow 4s linear infinite}
+@keyframes rainbow{to{background-position:300%}}
+.res{font-size:14px;margin-top:6px}
+.msg{font-size:13px;color:var(--mute);margin-top:6px;line-height:1.7}
+.pct{position:absolute;right:16px;top:16px;text-align:right;font-size:11px;color:var(--mute)}
+.pct b{display:block;font-family:var(--serif);font-size:20px;color:var(--ink)}
+.total{border:1px solid var(--line);border-radius:18px;padding:18px;margin:18px 0;text-align:center;opacity:0}
+.total.show{animation:pop .6s ease forwards}
+.total .big{font-family:var(--serif);font-size:30px;margin:4px 0}
+.total .big em{font-style:normal;color:var(--gold)}
+.meter{height:8px;border-radius:8px;background:rgba(255,255,255,.07);margin-top:12px;position:relative;overflow:hidden}
+.meter i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#8a5fd1,var(--gold));border-radius:8px;width:0;transition:width 1.2s ease}
+.small{font-size:12px;color:var(--mute);line-height:1.8}
+details{border:1px solid rgba(255,255,255,.08);border-radius:14px;margin-top:12px;background:rgba(255,255,255,.02)}
+summary{padding:14px 16px;font-size:13px;color:var(--mute);cursor:pointer;list-style:none;display:flex;justify-content:space-between}
+summary::after{content:"＋";color:var(--gold)}
+details[open] summary::after{content:"－"}
+.list{padding:0 12px 12px}
+.row{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;padding:10px 4px;border-top:1px solid rgba(255,255,255,.05)}
+.row .n{font-size:11px;color:var(--dim);text-align:center}
+.row .t{font-size:13px}
+.row .t small{display:block;color:var(--mute);font-size:11px;margin-top:2px}
+.row .p{font-size:12px;color:var(--mute);text-align:right;min-width:58px}
+.row .p b{color:var(--ink);font-weight:600}
+.bar{height:3px;border-radius:3px;background:rgba(255,255,255,.06);margin-top:5px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--gold);opacity:.7}
+.tbl{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;padding:0 14px}
+.tbl span{font-family:ui-monospace,Menlo,monospace;font-size:11px;text-align:center;padding:5px 0;border-radius:4px;background:rgba(255,255,255,.04);color:var(--dim)}
+.tbl span.used{color:var(--mute)}
+.tbl span.hi{background:var(--gold);color:#2a1d05}
+.fchips{display:flex;flex-wrap:wrap;gap:6px;padding:12px 14px}
+.fchips button{font-size:11px;border:1px solid var(--line);border-radius:99px;padding:4px 10px;color:var(--mute)}
+.fchips button.on{background:var(--gold);color:#2a1d05}
+.how{padding:0 16px 14px;font-size:12px;color:var(--mute);line-height:1.9}
+.dev{display:flex;gap:8px;padding:0 14px 14px;flex-wrap:wrap}
+.dev button{font-size:11px;border:1px dashed var(--dim);border-radius:8px;padding:6px 10px;color:var(--dim)}
+.foot{text-align:center;color:var(--dim);font-size:11px;margin-top:22px;line-height:1.8}
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div id="app">
+  <header class="top">
+    <div class="brand">せかい占い</div>
+    <button id="profileBtn" class="chip" hidden></button>
+  </header>
+
+  <!-- 入力 -->
+  <section id="onboard" class="screen">
+    <h1>はじめまして。<br>あなたのことを教えてください。</h1>
+    <p class="lead">名前と生年月日から、世界中の占いを一度に計算します。<br>入力した内容はこの端末にだけ保存されます。</p>
+    <div class="field"><label>おなまえ</label><input id="inName" maxlength="20" placeholder="やぴ" autocomplete="nickname"></div>
+    <div class="field"><label>よみがな（ひらがな）</label><input id="inKana" maxlength="30" placeholder="やぴ"></div>
+    <div class="field"><label>生年月日</label><input id="inBirth" type="date" min="1900-01-01" max="2099-12-31"></div>
+    <div class="err" id="err"></div>
+    <button class="btn" id="saveBtn">はじめる</button>
+    <button class="btn ghost" id="cancelBtn" hidden>もどる</button>
+  </section>
+
+  <!-- ホーム -->
+  <section id="home" class="screen">
+    <div class="date" id="homeDate"></div>
+    <h1 style="margin-top:6px"><span id="homeName"></span>さんの<br>今日のいちばんを引く</h1>
+    <div class="orbWrap"><div class="orb"></div></div>
+    <div class="count">世界の <b id="fCount"></b> の占いを、一度にまとめて占います</div>
+    <div class="tags" id="tags"></div>
+    <button class="btn" id="drawBtn">占う</button>
+    <p class="foot">1日1回。結果は今日の終わりまで変わりません。</p>
+  </section>
+
+  <!-- 結果 -->
+  <section id="result" class="screen">
+    <div class="date" id="resDate" style="text-align:center"></div>
+    <div class="secT">今日のいちばん</div>
+    <div id="top3"></div>
+    <div class="total" id="total"></div>
+    <details id="allBox"><summary>すべての占い結果</summary><div class="list" id="allList"></div></details>
+    <details id="howBox"><summary>しくみと乱数表</summary>
+      <div class="how" id="howText"></div>
+      <div class="fchips" id="fchips"></div>
+      <div class="tbl" id="tbl"></div>
+      <div class="how" style="padding-top:12px">開発用：URL末尾に <code>?date=2026-12-24</code> を付けると、その日として占えます。</div>
+      <div class="dev"><button id="replayBtn">演出をもう一度</button><button id="redrawBtn">今日を引き直す（開発用）</button><button id="wipeBtn">データを全部消す</button></div>
+    </details>
+    <p class="foot">明日になると、新しい運勢が届きます。</p>
+  </section>
+</div>
+
+<div id="overlay">
+  <div class="ringBox"><div class="ring"></div><div id="flick"></div></div>
+  <div id="flickSub">占っています</div>
+  <div class="prog"><i id="progBar"></i></div>
+</div>
+
+<script>
+'use strict';
+/* ========== 基本ユーティリティ ========== */
+const $=s=>document.querySelector(s);
+const pad=n=>String(n).padStart(2,'0');
+const mod=(a,n)=>((a%n)+n)%n;
+const dsum=n=>String(n).split('').reduce((a,c)=>a+(+c||0),0);
+const red=n=>{while(n>9)n=dsum(n);return n};
+const keyOf=o=>`${o.y}-${pad(o.m)}-${pad(o.d)}`;
+const parseYMD=s=>{const[y,m,d]=s.split('-').map(Number);return{y,m,d}};
+const jdn=o=>Math.floor(Date.UTC(o.y,o.m-1,o.d)/864e5)+2440588; // ユリウス通日
+const sexa=o=>mod(jdn(o)+49,60);                                  // 日の干支 0=甲子
+const WEEK='日月火水木金土';
+function todayYMD(){
+  const q=new URLSearchParams(location.search).get('date');
+  if(q&&/^\d{4}-\d{2}-\d{2}$/.test(q))return parseYMD(q);
+  const t=new Date();return{y:t.getFullYear(),m:t.getMonth()+1,d:t.getDate()};
+}
+const fmtDate=o=>`${o.y}年${o.m}月${o.d}日（${WEEK[new Date(o.y,o.m-1,o.d).getDay()]}）`;
+const setsuYear=b=>(b.m<2||(b.m===2&&b.d<4))?b.y-1:b.y;           // 立春(2/4)区切りの年
+
+/* ========== 保存 ========== */
+const STORE='sekai-uranai.v1';
+let db;try{db=JSON.parse(localStorage.getItem(STORE))||{}}catch(e){db={}}
+db.draws=db.draws||{};
+function persist(){try{localStorage.setItem(STORE,JSON.stringify(db))}catch(e){}}
+
+/* ========== 分布と順位 ==========
+   dist = [[score, p, P(score以上)], ...] スコア降順 */
+function mkDist(pairs){
+  const m=new Map();for(const[s,p]of pairs){const k=Math.round(s*10)/10;m.set(k,(m.get(k)||0)+p)}
+  const arr=[...m].sort((a,b)=>b[0]-a[0]);let c=0;const tot=arr.reduce((a,x)=>a+x[1],0);
+  return arr.map(([s,p])=>{c+=p/tot;return[s,p/tot,Math.min(1,c)]});
+}
+function topPct(dist,s){let r=1;for(const[sc,,c]of dist){if(sc>=s-1e-9)r=c;else break}return r}
+function sample(dist,u){let lo=0,hi=dist.length-1;while(lo<hi){const m=(lo+hi)>>1;if(u<=dist[m][2])hi=m;else lo=m+1}return dist[lo][0]}
+const uniform=(arr,f)=>mkDist(arr.map(x=>[f(x),1/arr.length]));
+const GRADES=['超大吉','大吉','中吉','吉','小吉','末吉'];
+function grade(p){return p<=.03?'超大吉':p<=.10?'大吉':p<=.25?'中吉':p<=.50?'吉':p<=.80?'小吉':'末吉'}
+// その占いの最高の結果が出たときは、確率に関係なく最低でも大吉にする（おみくじの大吉が中吉と表示されないように）
+function gradeOf(pct,s,dist){const g=grade(pct);return s>=dist[0][0]-1e-9&&GRADES.indexOf(g)>1?'大吉':g}
+const fmtPct=p=>{const v=p*100;return v<10?(Math.max(.1,v)).toFixed(1):String(Math.round(v))};
+
+/* ========== 乱数表 ==========
+   1回の抽選＝00〜99の数字60マス。抽選型の占いはそれぞれ担当マス(重複あり)を読む */
+const TABLE_SIZE=60;
+function newTable(){const a=new Uint32Array(TABLE_SIZE);crypto.getRandomValues(a);return[...a].map(x=>x%100)}
+function U(t,start,len){let n=0;for(let i=0;i<len;i++)n=n*100+t[start+i];return n/Math.pow(100,len)}
+function pick(u,outs){let c=0;for(const o of outs){c+=o.p;if(u<c)return o}return outs[outs.length-1]}
+function mulberry(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+/* ========== データ ========== */
+const STEMS='甲乙丙丁戊己庚辛壬癸',BRANCH='子丑寅卯辰巳午未申酉戌亥';
+const SIGNS=['牡羊座','牡牛座','双子座','蟹座','獅子座','乙女座','天秤座','蠍座','射手座','山羊座','水瓶座','魚座'];
+const STAR=['','一白水星','二黒土星','三碧木星','四緑木星','五黄土星','六白金星','七赤金星','八白土星','九紫火星'];
+const STAR_EL=['','水','土','木','木','土','金','金','土','火'];
+const GEN={木:'火',火:'土',土:'金',金:'水',水:'木'},KOKU={木:'土',土:'水',水:'火',火:'金',金:'木'};
+const SEALS=['赤い竜','白い風','青い夜','黄色い種','赤い蛇','白い世界の橋渡し','青い手','黄色い星','赤い月','白い犬','青い猿','黄色い人','赤い空歩く人','白い魔法使い','青い鷲','黄色い戦士','赤い地球','白い鏡','青い嵐','黄色い太陽'];
+// [名前, 正位置点, 逆位置点, 正キーワード, 逆キーワード]
+const TAROT=[['愚者',76,45,'自由な一歩','気まぐれ'],['魔術師',90,45,'はじまりの力','空回り'],['女教皇',76,50,'直感がさえる','神経質'],['女帝',93,52,'実りと豊かさ','甘えすぎ'],['皇帝',86,45,'責任と成功','強引'],['法王',80,50,'信頼と助言','形式ばかり'],['恋人',91,50,'ときめく選択','迷い'],['戦車',88,45,'勝利への前進','暴走'],['力',85,50,'やさしい強さ','自信不足'],['隠者',62,45,'内なる答え','孤立'],['運命の輪',96,42,'転機と幸運','すれちがい'],['正義',76,45,'公平な判断','不均衡'],['吊るされた男',55,40,'視点を変える','停滞'],['死神',50,56,'終わりと再生','手放せない'],['節制',80,52,'調和','乱れ'],['悪魔',35,60,'誘惑','解放'],['塔',20,40,'突然の変化','ゆるやかな崩れ'],['星',95,55,'希望','少しの不安'],['月',40,55,'ゆらぎ','霧が晴れる'],['太陽',100,66,'最高の輝き','少し曇り'],['審判',86,45,'復活と知らせ','保留'],['世界',98,56,'完成','あと一歩']];
+// [名前, 意味, 正点, 逆点(nullは逆位置なし)]
+const RUNES=[['フェフ','富',90,45],['ウルズ','力',80,45],['スリサズ','試練の棘',50,35],['アンスズ','言葉',80,45],['ライド','旅',80,45],['ケナズ','ひらめき',85,45],['ギューフ','贈り物',92,null],['ウンジョー','喜び',95,45],['ハガラズ','嵐',30,null],['ニイド','忍耐',42,null],['イサ','静止',40,null],['ヤラ','収穫',88,null],['エイワズ','守り',70,null],['ペオース','秘密',65,45],['エオロー','保護',85,45],['シゲル','太陽',98,null],['テイワズ','勝利',85,45],['ベオーク','成長',85,45],['エワズ','前進',80,45],['マンナズ','人とのつながり',75,45],['ラグズ','流れ',70,45],['イングズ','完成',85,null],['ダガズ','夜明け',95,null],['オセル','受け継ぐもの',80,45]];
+// ジオマンシー [上→下の点の数, 名前, 点]
+const GEO=[['2211','大いなる幸運',98],['2121','獲得',92],['1222','喜び',90],['2111','竜の頭',85],['1122','小さな幸運',80],['1211','少女',75],['2212','白',70],['2112','結合',65],['1111','道',60],['2222','民衆',55],['1121','少年',50],['2122','赤',35],['1112','竜の尾',35],['1221','牢獄',30],['1212','喪失',30],['2221','悲しみ',25]];
+// 易：八卦(下から3本 1=陽) と 上卦×下卦→卦番号
+const TRI={'111':0,'110':1,'101':2,'100':3,'011':4,'010':5,'001':6,'000':7}; // 乾兌離震巽坎艮坤
+const KW=[[1,10,13,25,44,6,33,12],[43,58,49,17,28,47,31,45],[14,38,30,21,50,64,56,35],[34,54,55,51,32,40,62,16],[9,61,37,42,57,59,53,20],[5,60,63,3,48,29,39,8],[26,41,22,27,18,4,52,23],[11,19,36,24,46,7,15,2]];
+const HEX='乾為天,坤為地,水雷屯,山水蒙,水天需,天水訟,地水師,水地比,風天小畜,天沢履,地天泰,天地否,天火同人,火天大有,地山謙,雷地豫,沢雷随,山風蠱,地沢臨,風地観,火雷噬嗑,山火賁,山地剥,地雷復,天雷无妄,山天大畜,山雷頤,沢風大過,坎為水,離為火,沢山咸,雷風恒,天山遯,雷天大壮,火地晋,地火明夷,風火家人,火沢睽,水山蹇,雷水解,山沢損,風雷益,沢天夬,天風姤,沢地萃,地風升,沢水困,水風井,沢火革,火風鼎,震為雷,艮為山,風山漸,雷沢帰妹,雷火豊,火山旅,巽為風,兌為沢,風水渙,水沢節,風沢中孚,雷山小過,水火既済,火水未済'.split(',');
+const HEX_S=[90,80,40,50,65,30,55,80,60,60,96,30,85,95,90,80,75,45,85,60,55,65,25,75,60,80,65,40,25,70,85,75,45,70,90,30,80,40,25,75,55,92,55,45,80,90,20,60,70,90,55,50,80,35,85,45,65,80,60,60,80,50,70,55];
+const SUIT=['♥','♦','♣','♠'],SUIT_BASE=[70,64,58,40],SUIT_KW=['愛と人間関係','お金と豊かさ','仕事と成功','乗り越える力'];
+const RANK=['A','2','3','4','5','6','7','8','9','10','J','Q','K'],RANK_B=[28,0,2,4,6,8,10,12,14,20,18,20,22];
+const OMIKUJI=[{l:'大吉',p:.17,s:100,m:'迷わず進んでよい日'},{l:'吉',p:.22,s:82,m:'素直な行動が運を呼ぶ'},{l:'中吉',p:.14,s:76,m:'ほどよい追い風'},{l:'小吉',p:.13,s:66,m:'小さな良いことを拾える'},{l:'末吉',p:.12,s:56,m:'あとから良くなる'},{l:'凶',p:.17,s:35,m:'慎重さが味方になる'},{l:'大凶',p:.05,s:15,m:'ここから上がるだけ'}];
+
+/* かな→数霊 */
+const GOJU='あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん';
+const SMALL={'ぁ':'あ','ぃ':'い','ぅ':'う','ぇ':'え','ぉ':'お','っ':'つ','ゃ':'や','ゅ':'ゆ','ょ':'よ','ゎ':'わ','ゐ':'い','ゑ':'え'};
+function toHira(s){return s.replace(/[ァ-ヶ]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60))}
+function kanaNum(s){
+  s=toHira(s).normalize('NFD').replace(/[゙゚]/g,'');let t=0;
+  for(const ch of s){const i=GOJU.indexOf(SMALL[ch]||ch);if(i>=0)t+=i+1}
+  return t?red(t):0;
+}
+
+/* ========== 計算型ヘルパー ========== */
+// 九星：日盤（冬至・夏至に最も近い甲子日で陽遁/陰遁を切り替える簡易法）
+function nearestKoshi(j){const k=j-mod(j+49,60);return(j-k)>30?k+60:k}
+function dayStar(o){
+  const j=jdn(o),sw=[];
+  for(const y of[o.y-1,o.y,o.y+1]){sw.push([nearestKoshi(jdn({y,m:6,d:21})),'in']);sw.push([nearestKoshi(jdn({y,m:12,d:22})),'yo'])}
+  let b=null;for(const s of sw)if(s[0]<=j&&(!b||s[0]>b[0]))b=s;
+  const n=j-b[0];return b[1]==='yo'?mod(n,9)+1:9-mod(n,9);
+}
+const honmei=b=>{const n=mod(11-mod(setsuYear(b),9),9);return n===0?9:n};
+function starRel(me,day){
+  const a=STAR_EL[me],b=STAR_EL[day];
+  if(a===b)return['比和',85];if(GEN[b]===a)return['生気',95];if(GEN[a]===b)return['退気',62];
+  if(KOKU[a]===b)return['死気',55];return['殺気',35];
+}
+// 干支の関係
+function branchRel(a,b){
+  const d=mod(b-a,12);
+  if(d===0)return['比和',78];if(d===6)return['冲',30];if(d===4||d===8)return['三合',95];
+  if(mod(a+b,12)===1)return['六合',92];if(mod(a+b,12)===7)return['害',38];return['ふつう',60];
+}
+// マヤ暦（ドリームスペル式：2/29を数えない。2013/7/26=KIN164）
+const leapsBefore=y=>Math.floor((y-1)/4)-Math.floor((y-1)/100)+Math.floor((y-1)/400);
+const isLeap=y=>(y%4===0&&y%100!==0)||y%400===0;
+const Lc=o=>leapsBefore(o.y)+(isLeap(o.y)&&(o.m>2||(o.m===2&&o.d===29))?1:0);
+const MREF={y:2013,m:7,d:26};
+const kinOf=o=>mod(163+(jdn(o)-jdn(MREF))-(Lc(o)-Lc(MREF)),260)+1;
+const sealOf=k=>(k-1)%20+1,toneOf=k=>(k-1)%13+1;
+function sealRel(a,b){
+  if(a===b)return['同じ紋章',95];if((a+b)%20===19)return['類似キン',90];if((a+b)%20===1)return['神秘キン',86];
+  if(Math.abs(a-b)===10)return['反対キン',45];if((a-1)%4===(b-1)%4)return['同じ色',70];return['ふつう',58];
+}
+// 星座
+const ZB=[[20,10],[19,11],[21,0],[20,1],[21,2],[22,3],[23,4],[23,5],[23,6],[24,7],[23,8],[22,9]];
+const sunSign=b=>{const[sd,sg]=ZB[b.m-1];return b.d>=sd?sg:mod(sg-1,12)};
+function moonSign(o){ // 正午(日本時間)の月の黄経・簡易式
+  const d=Date.UTC(o.y,o.m-1,o.d,3)/864e5+2440587.5-2451545;
+  const L=218.316+13.176396*d,M=(134.963+13.064993*d)*Math.PI/180;
+  return Math.floor(mod(L+6.289*Math.sin(M),360)/30);
+}
+const ASPECT={0:['合',88],1:['隣り合う',65],2:['セクスタイル',85],3:['スクエア',40],4:['トライン',95],5:['インコンジャンクト',60],6:['オポジション',50]};
+const aspect=(a,b)=>{const d=mod(b-a,12);return ASPECT[Math.min(d,12-d)]};
+// バイオリズム
+const bioV=d=>[23,28,33].map(c=>Math.sin(2*Math.PI*d/c));
+const bioS=d=>{const v=bioV(d);return 50+50*(v[0]+v[1]+v[2])/3};
+let BIO_DIST=null;
+// 数秘術
+const PD_S=[0,85,70,92,55,78,82,50,95,62],PD_K=['','はじまり','協力','よろこび','積み上げ','変化','愛情','内省','豊かさ','完了'];
+const personalDay=(b,t)=>red(red(red(b.m)+red(b.d)+red(dsum(t.y)))+t.m)+t.d;
+const triad=n=>[1,5,7].includes(n)?0:[2,4,8].includes(n)?1:2;
+function numRel(a,b){if(a===b)return['同じ数',95];if(triad(a)===triad(b))return['同じ三角',85];return['ちがう流れ',55]}
+
+/* ========== 占い定義 ==========
+   kind: calc=名前・生年月日・日付で決まる(1日固定) / draw=乱数表から引く
+   run(c) → {s:点数, r:結果, m:ひとこと}   dist(c) → 分布 */
+const FORTUNES=[
+  {id:'omikuji',name:'おみくじ',origin:'日本',kind:'draw',cells:[0,1],school:'寺社の一般的な配分（大吉17%）',
+   run(c){const o=pick(U(c.t,0,2),OMIKUJI);return{s:o.s,r:o.l,m:o.m}},
+   dist(){return mkDist(OMIKUJI.map(o=>[o.s,o.p]))}},
+  {id:'tarot',name:'タロット',origin:'ヨーロッパ',kind:'draw',cells:[2,3,4],school:'大アルカナ22枚・正逆あり',
+   run(c){const k=TAROT[Math.floor(U(c.t,2,2)*22)],rv=c.t[4]>=50;return{s:rv?k[2]:k[1],r:`${k[0]}（${rv?'逆位置':'正位置'}）`,m:rv?k[4]:k[3]}},
+   dist(){return mkDist(TAROT.flatMap(k=>[[k[1],1/44],[k[2],1/44]]))}},
+  {id:'rune',name:'ルーン',origin:'北欧',kind:'draw',cells:[4,5,6],school:'エルダー・フサルク24文字',
+   run(c){const k=RUNES[Math.floor(U(c.t,5,2)*24)],rv=k[3]!==null&&c.t[4]%2===1;return{s:rv?k[3]:k[2],r:`${k[0]}${rv?'（逆）':''}`,m:k[1]}},
+   dist(){return mkDist(RUNES.flatMap(k=>k[3]===null?[[k[2],1/24]]:[[k[2],1/48],[k[3],1/48]]))}},
+  {id:'cards',name:'トランプ占い',origin:'ヨーロッパ',kind:'draw',cells:[7,8],school:'52枚から1枚（カートマンシー）',
+   run(c){const i=Math.floor(U(c.t,7,2)*52),su=Math.floor(i/13),rk=i%13;return{s:Math.min(100,SUIT_BASE[su]+RANK_B[rk]),r:`${SUIT[su]}${RANK[rk]}`,m:SUIT_KW[su]}},
+   dist(){const a=[];for(let su=0;su<4;su++)for(let rk=0;rk<13;rk++)a.push([Math.min(100,SUIT_BASE[su]+RANK_B[rk]),1/52]);return mkDist(a)}},
+  {id:'dice',name:'3つのサイコロ',origin:'古代ギリシャ',kind:'draw',cells:[9,10,11,12],school:'アストラガロマンシー（ゾロ目は特別）',
+   run(c){const d=[0,1,2].map(i=>Math.floor(U(c.t,9+i,2)*6)+1);return{...diceScore(d),r:d.join('・')+`（合計${d[0]+d[1]+d[2]}）`}},
+   dist(){const a=[];for(let x=1;x<=6;x++)for(let y=1;y<=6;y++)for(let z=1;z<=6;z++)a.push([diceScore([x,y,z]).s,1/216]);return mkDist(a)}},
+  {id:'poe',name:'ポエ（筊杯）',origin:'台湾',kind:'draw',cells:[13,14,15],school:'3回投げて聖筊の数',
+   run(c){const r=[13,14,15].map(i=>c.t[i]<50?'聖':c.t[i]<75?'笑':'陰');const n=r.filter(x=>x==='聖').length;return{s:[30,50,75,100][n],r:r.join('・')+`（聖筊${n}回）`,m:['神様は様子見','少し背中を押してくれる','かなり応援されている','神様が全力で味方'][n]}},
+   dist(){return mkDist([[100,1/8],[75,3/8],[50,3/8],[30,1/8]])}},
+  {id:'geo',name:'ジオマンシー',origin:'中東・アフリカ',kind:'draw',cells:[16,17,18,19],school:'16図形（点の奇数・偶数）',
+   run(c){const pat=[16,17,18,19].map(i=>c.t[i]%2?'1':'2').join('');const g=GEO.find(x=>x[0]===pat);return{s:g[2],r:g[1],m:'図形 '+pat.replace(/1/g,'●').replace(/2/g,'●●').split('').join('')}},
+   dist(){return mkDist(GEO.map(g=>[g[2],1/16]))}},
+  {id:'iching',name:'易',origin:'中国',kind:'draw',cells:[18,19,20,21,22,23],school:'コイン法・六十四卦（変爻は今後）',
+   run(c){const b=[18,19,20,21,22,23].map(i=>c.t[i]%2?'1':'0');const lo=TRI[b.slice(0,3).join('')],up=TRI[b.slice(3).join('')];const n=KW[up][lo];return{s:HEX_S[n-1],r:`第${n}卦 ${HEX[n-1]}`,m:''}},
+   dist(){return mkDist(HEX_S.map(s=>[s,1/64]))}},
+
+  {id:'bio',name:'バイオリズム',origin:'ドイツ',kind:'calc',school:'身体23日・感情28日・知性33日周期',
+   run(c){const d=jdn(c.today)-jdn(c.p.birth),v=bioV(d).map(x=>Math.round(x*100));const ar=x=>(x>=0?'+':'')+x;return{s:bioS(d),r:`身体${ar(v[0])} 感情${ar(v[1])} 知性${ar(v[2])}`,m:'生まれて'+d.toLocaleString()+'日目'}},
+   dist(){if(!BIO_DIST){const a=[];const N=23*28*33;for(let d=0;d<N;d++)a.push([bioS(d),1/N]);BIO_DIST=mkDist(a)}return BIO_DIST}},
+  {id:'num',name:'数秘術',origin:'古代ギリシャ',kind:'calc',school:'ピタゴラス式パーソナルデー',
+   run(c){const n=red(personalDay(c.p.birth,c.today));return{s:PD_S[n],r:`パーソナルデー ${n}`,m:PD_K[n]+'の日'}},
+   dist(){return uniform([1,2,3,4,5,6,7,8,9],n=>PD_S[n])}},
+  {id:'eto',name:'干支',origin:'中国',kind:'calc',school:'今日の日支 × 生まれ年の支',
+   run(c){const s=sexa(c.today),me=mod(setsuYear(c.p.birth)-4,12),[l,sc]=branchRel(me,s%12);return{s:sc,r:`${STEMS[s%10]}${BRANCH[s%12]}の日 × ${BRANCH[me]}年 → ${l}`,m:''}},
+   dist(c){const me=mod(setsuYear(c.p.birth)-4,12);return uniform([...Array(12).keys()],b=>branchRel(me,b)[1])}},
+  {id:'kyusei',name:'九星気学',origin:'日本・中国',kind:'calc',school:'本命星 × 今日の日盤（簡易計算）',
+   run(c){const me=honmei(c.p.birth),dy=dayStar(c.today),[l,sc]=starRel(me,dy);return{s:sc,r:`${STAR[dy]}の日 × 本命${STAR[me]} → ${l}`,m:''}},
+   dist(c){const me=honmei(c.p.birth);return uniform([1,2,3,4,5,6,7,8,9],d=>starRel(me,d)[1])}},
+  {id:'maya',name:'マヤ暦',origin:'メソアメリカ',kind:'calc',school:'ドリームスペル式・太陽の紋章',
+   run(c){const k=kinOf(c.today),me=sealOf(kinOf(c.p.birth)),td=sealOf(k),[l,sc]=sealRel(me,td);return{s:sc,r:`KIN${k}「${SEALS[td-1]}」× あなた「${SEALS[me-1]}」→ ${l}`,m:`今日の銀河の音 ${toneOf(k)}`}},
+   dist(c){const me=sealOf(kinOf(c.p.birth));return uniform([...Array(20).keys()].map(i=>i+1),b=>sealRel(me,b)[1])}},
+  {id:'moon',name:'月星座',origin:'西洋占星術',kind:'calc',school:'あなたの太陽星座 × 今日の月の星座',
+   run(c){const me=sunSign(c.p.birth),mo=moonSign(c.today),[l,sc]=aspect(me,mo);return{s:sc,r:`月は${SIGNS[mo]} × あなた${SIGNS[me]} → ${l}`,m:''}},
+   dist(c){const me=sunSign(c.p.birth);return uniform([...Array(12).keys()],m=>aspect(me,m)[1])}},
+  {id:'kotodama',name:'数霊',origin:'日本',kind:'calc',school:'よみがなの五十音数 × 今日の数',
+   run(c){const me=kanaNum(c.p.kana),td=red(dsum(keyOf(c.today).replace(/-/g,''))),[l,sc]=numRel(me,td);return{s:sc,r:`名前の数${me} × 今日の数${td} → ${l}`,m:''}},
+   dist(c){const me=kanaNum(c.p.kana);return uniform([1,2,3,4,5,6,7,8,9],n=>numRel(me,n)[1])}},
+];
+function diceScore(d){
+  const sum=d[0]+d[1]+d[2];
+  if(d[0]===d[1]&&d[1]===d[2])return{s:100,m:'ゾロ目！めったに出ない吉兆'};
+  return{s:30+(sum-3)*4,m:sum>=14?'勢いのある目':sum>=9?'安定した目':'控えめな目'};
+}
+
+/* ========== 抽選の評価 ========== */
+function evaluate(profile,today,table){
+  const c={p:profile,today,t:table};
+  const rows=FORTUNES.map(f=>{const r=f.run(c),dist=f.dist(c),pct=topPct(dist,r.s);return{f,r,dist,pct,g:gradeOf(pct,r.s,dist)}});
+  rows.sort((a,b)=>a.pct-b.pct||b.r.s-a.r.s);
+  // 総合：全占いの点数合計が、ありうる日々の中で上位何%か（モンテカルロ）
+  const total=rows.reduce((a,x)=>a+x.r.s,0);
+  const rnd=mulberry(table.reduce((a,x,i)=>a*31+x+i|0,7));
+  const N=20000;let ge=0;
+  for(let i=0;i<N;i++){let s=0;for(const x of rows)s+=sample(x.dist,rnd());if(s>=total-1e-9)ge++}
+  return{rows,total,totalPct:ge/N,good:rows.filter(x=>x.pct<=.10).length};
+}
+
+/* ========== 画面 ========== */
+const today=todayYMD(),TKEY=keyOf(today);
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id))}
+function refreshChip(){const b=$('#profileBtn');if(db.profile){b.hidden=false;b.textContent=db.profile.name+' さん ✎'}else b.hidden=true}
+
+function openOnboard(edit){
+  show('onboard');$('#err').textContent='';
+  $('#cancelBtn').hidden=!edit;$('#saveBtn').textContent=edit?'保存する':'はじめる';
+  if(edit&&db.profile){$('#inName').value=db.profile.name;$('#inKana').value=db.profile.kana;$('#inBirth').value=db.profile.birthStr}
+}
+$('#saveBtn').onclick=()=>{
+  const name=$('#inName').value.trim(),kana=toHira($('#inKana').value.trim()),b=$('#inBirth').value;
+  if(!name)return $('#err').textContent='おなまえを入れてください';
+  if(!kana||!kanaNum(kana))return $('#err').textContent='よみがなをひらがなで入れてください';
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(b))return $('#err').textContent='生年月日を入れてください';
+  if(jdn(parseYMD(b))>jdn(today))return $('#err').textContent='未来の日付は選べません';
+  db.profile={name,kana,birthStr:b};persist();refreshChip();route();
+};
+$('#cancelBtn').onclick=()=>route();
+$('#profileBtn').onclick=()=>openOnboard(true);
+
+function profileObj(){const p=db.profile;return{...p,birth:parseYMD(p.birthStr)}}
+function route(){
+  refreshChip();
+  if(!db.profile)return openOnboard(false);
+  if(db.draws[TKEY])return renderResult(false);
+  show('home');
+  $('#homeDate').textContent=fmtDate(today);$('#homeName').textContent=db.profile.name;
+  $('#fCount').textContent=FORTUNES.length;
+  $('#tags').innerHTML=FORTUNES.map(f=>`<span>${f.name}</span>`).join('');
+}
+$('#drawBtn').onclick=()=>{
+  db.draws[TKEY]={table:newTable(),at:Date.now()};persist();
+  playOverlay(()=>renderResult(true));
+};
+
+function playOverlay(done){
+  const ov=$('#overlay'),fl=$('#flick'),bar=$('#progBar');ov.classList.add('on');
+  let i=0;const n=FORTUNES.length;bar.style.width='0';
+  const tick=()=>{
+    if(i<n){fl.textContent=FORTUNES[i].name;bar.style.width=((i+1)/n*100)+'%';$('#flickSub').textContent=`占っています ${i+1} / ${n}`;i++;setTimeout(tick,130)}
+    else{fl.textContent='集計中…';$('#flickSub').textContent='いちばん良かった占いを探しています';setTimeout(()=>{ov.classList.remove('on');done()},700)}
+  };tick();
+}
+
+function renderResult(animate){
+  show('result');
+  const d=db.draws[TKEY],ev=evaluate(profileObj(),today,d.table);
+  $('#resDate').textContent=fmtDate(today);
+  const top=ev.rows.slice(0,3);
+  $('#top3').innerHTML=top.map((x,i)=>`
+    <div class="card r${i+1}" data-i="${i}">
+      <div class="pct">上位<b>${fmtPct(x.pct)}%</b></div>
+      <div class="rk"><span class="no">${i+1}位</span></div>
+      <div class="fname">${x.f.name}<span class="origin">${x.f.origin}</span></div>
+      <div class="grade g-${x.g}">${x.g}</div>
+      <div class="res">${x.r.r}</div>
+      ${x.r.m?`<div class="msg">${x.r.m}</div>`:''}
+    </div>`).join('');
+  const tg=grade(ev.totalPct);
+  $('#total').innerHTML=`
+    <div class="small">全${ev.rows.length}の占いをあわせた今日の運</div>
+    <div class="big">上位 <em>${fmtPct(ev.totalPct)}%</em> の幸運日</div>
+    <div class="small">総合ランク「${tg}」／ 上位10%以内の占いが <b style="color:var(--gold)">${ev.good}個</b></div>
+    <div class="meter"><i></i></div>`;
+  $('#allList').innerHTML=ev.rows.map((x,i)=>`
+    <div class="row"><div class="n">${i+1}</div>
+      <div class="t">${x.f.name}　<b>${x.g}</b><small>${x.r.r}</small><div class="bar"><i style="width:${Math.max(3,(1-x.pct)*100)}%"></i></div></div>
+      <div class="p">上位<b>${fmtPct(x.pct)}</b>%</div></div>`).join('');
+  renderHow(d.table);
+  // 3位→2位→1位の順に出す
+  const cards=[...document.querySelectorAll('#top3 .card')],tot=$('#total');
+  const delays=animate?[1.5,0.8,0.15]:[0,0,0];
+  cards.forEach((el,i)=>setTimeout(()=>el.classList.add('show'),delays[i]*1000));
+  setTimeout(()=>{tot.classList.add('show');tot.querySelector('.meter i').style.width=Math.max(4,(1-ev.totalPct)*100)+'%'},(animate?2.4:0.1)*1000);
+}
+
+function renderHow(table){
+  $('#howText').innerHTML=`ボタンを押すと、00〜99の数字が60マス並んだ<b>乱数表</b>が1枚生まれます。抽選型の占いはそれぞれ担当のマス（重なりあり）を読んで結果を出し、計算型の占いは名前・生年月日・今日の日付から決まります。<br>各占いの結果は「その占いで、この結果以上が出る確率」＝<b>上位◯%</b>に直して比べ、いちばん珍しく良い3つを表示しています。占いが多いほど、どこかで良い結果が出やすくなります。`;
+  const draws=FORTUNES.filter(f=>f.kind==='draw'),used=new Set(draws.flatMap(f=>f.cells));
+  const paint=cells=>{$('#tbl').innerHTML=table.map((v,i)=>`<span class="${cells&&cells.includes(i)?'hi':used.has(i)?'used':''}">${pad(v)}</span>`).join('')};
+  $('#fchips').innerHTML=draws.map(f=>`<button data-id="${f.id}">${f.name}</button>`).join('');
+  $('#fchips').onclick=e=>{const b=e.target.closest('button');if(!b)return;const on=!b.classList.contains('on');
+    [...$('#fchips').children].forEach(x=>x.classList.remove('on'));if(on){b.classList.add('on');paint(FORTUNES.find(f=>f.id===b.dataset.id).cells)}else paint()};
+  paint();
+}
+$('#replayBtn').onclick=()=>{window.scrollTo(0,0);playOverlay(()=>renderResult(true))};
+$('#redrawBtn').onclick=()=>{delete db.draws[TKEY];persist();window.scrollTo(0,0);route()};
+$('#wipeBtn').onclick=()=>{if(!confirm('名前・生年月日・履歴をすべて消しますか？'))return;try{localStorage.removeItem(STORE)}catch(e){}db={draws:{}};route()};
+
+/* 星空 */
+(function(){const cv=$('#stars'),x=cv.getContext('2d');let W,H,S=[];
+  function rs(){W=cv.width=innerWidth*devicePixelRatio;H=cv.height=innerHeight*devicePixelRatio;S=Array.from({length:90},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.3*devicePixelRatio+.2,p:Math.random()*6}))}
+  function dr(t){x.clearRect(0,0,W,H);for(const s of S){x.globalAlpha=.25+.35*Math.sin(t/900+s.p)**2;x.fillStyle='#fff3d0';x.beginPath();x.arc(s.x,s.y,s.r,0,7);x.fill()}requestAnimationFrame(dr)}
+  addEventListener('resize',rs);rs();requestAnimationFrame(dr)})();
+
+route();
+</script>
+</body>
+</html>
