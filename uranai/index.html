@@ -1026,9 +1026,9 @@ function drawShare(ev){
   c.fillStyle=gold;c.font=`600 34px ${SERIF_C}`;c.fillText('せ か い 占 い',W/2,100);
   c.fillStyle=mute;c.font=`30px ${SERIF_C}`;c.fillText(`${fmtDate(today)}　${db.profile.name} さんの今日のいちばん`,W/2,152);
   // top3
-  const top=ev.rows.slice(0,3);let y=200;
+  const top=ev.rows.slice(0,3);let y=190;
   top.forEach((x,i)=>{
-    const h=i===0?330:205;
+    const h=i===0?300:190;
     rr(c,70,y,W-140,h,30);
     if(i===0){const lg=c.createLinearGradient(70,y,W-70,y+h);lg.addColorStop(0,'rgba(255,220,130,.20)');lg.addColorStop(1,'rgba(140,90,210,.16)');c.fillStyle=lg}else c.fillStyle='rgba(255,255,255,.05)';
     c.fill();c.strokeStyle=i===0?'rgba(255,230,160,.75)':'rgba(232,200,114,.28)';c.lineWidth=i===0?3:2;c.stroke();
@@ -1039,10 +1039,10 @@ function drawShare(ev){
     c.fillStyle=ink;c.font=`600 ${i===0?46:38}px ${SERIF_C}`;c.fillText(fmtPct(x.pct)+'%',W-110,y+(i===0?100:92));
     c.textAlign='left';
     const gg=c.createLinearGradient(0,y+80,0,y+180);gg.addColorStop(0,'#fff1c1');gg.addColorStop(1,'#e8c872');c.fillStyle=gg;
-    c.font=`700 ${i===0?110:72}px ${SERIF_C}`;c.fillText(x.g,106,y+(i===0?185:140));
+    c.font=`700 ${i===0?104:68}px ${SERIF_C}`;c.fillText(x.g,106,y+(i===0?180:134));
     c.fillStyle=ink;c.font=`${i===0?30:26}px ${SANS_C}`;
     const line=`${CAT_ICON[x.focus]} ${x.focus}運　${x.rd.cats[x.focus].text}`;
-    wrapText(c,line,110,y+(i===0?240:182),W-220,i===0?42:34,i===0?2:1);
+    wrapText(c,line,110,y+(i===0?236:174),W-220,i===0?40:34,i===0?2:1);
     y+=h+22;
   });
   // 総合
