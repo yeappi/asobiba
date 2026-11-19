@@ -28,7 +28,7 @@ body{min-height:100dvh;background:
 #app{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:16px 18px 80px}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
-.brand{font-family:var(--serif);letter-spacing:.2em;font-size:15px;color:var(--gold)}
+.brand{cursor:pointer;font-family:var(--serif);letter-spacing:.2em;font-size:15px;color:var(--gold)}
 .chip{border:1px solid var(--line);border-radius:99px;padding:6px 12px;font-size:12px;color:var(--mute)}
 .screen{display:none;animation:fade .4s ease}
 .screen.on{display:block}
@@ -222,6 +222,7 @@ details[open] summary::after{content:"－"}
       <div class="dev" style="padding-top:12px"><button id="replayBtn">演出をもう一度見る</button></div>
       <div id="devBox" hidden><div class="how">開発用：<code>?dev&amp;date=2026-12-24</code> でその日として占えます。</div><div class="dev"><button id="redrawBtn">今日を引き直す</button></div></div>
     </details>
+    <button class="btn ghost" id="toTopBtn">トップに戻る</button>
     <p class="foot">明日になると、新しい運勢が届きます。<br>占いは楽しみとしてお読みください。</p>
   </section>
 </div>
@@ -899,6 +900,8 @@ $('#saveBtn').onclick=()=>{
   db.profile={name,kana,birthStr:b,gender:GENDER};persist();refreshChip();route();
 };
 $('#cancelBtn').onclick=()=>route();
+$('#toTopBtn').onclick=()=>showHome();
+$('.brand').onclick=()=>{if(db.profile&&db.profile.gender)showHome()};
 $('#profileBtn').onclick=()=>openOnboard(true);
 
 function keyAtJ(j){const d=new Date((j-2440588)*864e5);return keyOf({y:d.getUTCFullYear(),m:d.getUTCMonth()+1,d:d.getUTCDate()})}
@@ -910,14 +913,18 @@ function route(){
   if(!db.profile)return openOnboard(false);
   if(!db.profile.gender)return openOnboard(true);
   if(db.draws[TKEY])return renderResult(false);
-  show('home');
+  showHome();
+}
+function showHome(){
+  const drawn=!!db.draws[TKEY];show('home');window.scrollTo(0,0);
   $('#homeDate').textContent=fmtDate(today);$('#homeName').textContent=db.profile.name;
   $('#fCount').textContent=FORTUNES.length;
-  {const st=streak();$('#homeStreak').textContent=st>0?`昨日まで ${st}日連続で占っています。今日も続けよう`:''}
+  $('#drawBtn').textContent=drawn?'今日の結果を見る':'占う';
+  {const st=streak();$('#homeStreak').textContent=drawn?`今日はもう占いました（${st}日連続）。明日また新しい運勢が届きます`:st>0?`昨日まで ${st}日連続で占っています。今日も続けよう`:''}
   $('#tags').innerHTML=FORTUNES.map(f=>`<span>${f.name}</span>`).join('');
 }
 $('#drawBtn').onclick=()=>{
-  if(db.draws[TKEY])return route();
+  if(db.draws[TKEY])return renderResult(false);
   db.draws[TKEY]={table:newTable(),at:Date.now()};persist();
   playOverlay(()=>renderResult(true));
 };
