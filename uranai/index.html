@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0d0b1a">
 <title>せかい占い — 今日のいちばん</title>
+<meta name="description" content="世界の15の占いを一度に占って、今日いちばん良かった3つを見せる占い。">
+<meta property="og:title" content="せかい占い — 今日のいちばん">
+<meta property="og:description" content="世界の15の占いを一度に占って、今日いちばん良かった3つを見せる占い。">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23171331'/%3E%3Cpath d='M40 14a18 18 0 1 0 0 36 22 22 0 0 1 0-36z' fill='%23e8c872'/%3E%3C/svg%3E">
 <style>
 :root{
   --bg:#0d0b1a;--bg2:#171331;--ink:#f3ecdc;--mute:#a89fbf;--dim:#6d6588;
@@ -164,6 +169,7 @@ details[open] summary::after{content:"－"}
 .cats b{display:block;color:var(--gold);font-size:14px;letter-spacing:2px;margin-top:3px}
 .cats s{text-decoration:none;color:rgba(255,255,255,.15)}
 .cats small{display:block;font-size:10px;color:var(--dim);margin-top:2px}
+.linkBtn{display:block;margin:22px auto 0;font-size:12px;color:var(--dim);text-decoration:underline}
 .foot{text-align:center;color:var(--dim);font-size:11px;margin-top:22px;line-height:1.8}
 </style>
 </head>
@@ -186,6 +192,7 @@ details[open] summary::after{content:"－"}
     <div class="err" id="err"></div>
     <button class="btn" id="saveBtn">はじめる</button>
     <button class="btn ghost" id="cancelBtn" hidden>もどる</button>
+    <button class="linkBtn" id="wipeBtn" hidden>この端末のデータをすべて消す</button>
   </section>
 
   <!-- ホーム -->
@@ -196,6 +203,7 @@ details[open] summary::after{content:"－"}
     <div class="count">世界の <b id="fCount"></b> の占いを、一度にまとめて占います</div>
     <div class="tags" id="tags"></div>
     <button class="btn" id="drawBtn">占う</button>
+    <p class="foot" id="homeStreak"></p>
     <p class="foot">1日1回。結果は今日の終わりまで変わりません。</p>
   </section>
 
@@ -211,10 +219,10 @@ details[open] summary::after{content:"－"}
       <div class="how" id="howText"></div>
       <div class="fchips" id="fchips"></div>
       <div class="tbl" id="tbl"></div>
-      <div class="how" style="padding-top:12px">開発用：URL末尾に <code>?date=2026-12-24</code> を付けると、その日として占えます。</div>
-      <div class="dev"><button id="replayBtn">演出をもう一度</button><button id="redrawBtn">今日を引き直す（開発用）</button><button id="wipeBtn">データを全部消す</button></div>
+      <div class="dev" style="padding-top:12px"><button id="replayBtn">演出をもう一度見る</button></div>
+      <div id="devBox" hidden><div class="how">開発用：<code>?dev&amp;date=2026-12-24</code> でその日として占えます。</div><div class="dev"><button id="redrawBtn">今日を引き直す</button></div></div>
     </details>
-    <p class="foot">明日になると、新しい運勢が届きます。</p>
+    <p class="foot">明日になると、新しい運勢が届きます。<br>占いは楽しみとしてお読みください。</p>
   </section>
 </div>
 
@@ -239,8 +247,9 @@ const parseYMD=s=>{const[y,m,d]=s.split('-').map(Number);return{y,m,d}};
 const jdn=o=>Math.floor(Date.UTC(o.y,o.m-1,o.d)/864e5)+2440588; // ユリウス通日
 const sexa=o=>mod(jdn(o)+49,60);                                  // 日の干支 0=甲子
 const WEEK='日月火水木金土';
+const DEV=new URLSearchParams(location.search).has('dev');
 function todayYMD(){
-  const q=new URLSearchParams(location.search).get('date');
+  const q=DEV&&new URLSearchParams(location.search).get('date');
   if(q&&/^\d{4}-\d{2}-\d{2}$/.test(q))return parseYMD(q);
   const t=new Date();return{y:t.getFullYear(),m:t.getMonth()+1,d:t.getDate()};
 }
@@ -421,6 +430,7 @@ const LUCKY_ACT=['いつもと違う道を歩く','温かい飲み物をゆっ�
 /* ========== 占い定義 ==========
    kind: calc=名前・生年月日・日付で決まる(1日固定) / draw=乱数表から引く
    run(c) → {s:点数, r:結果, h:見出し, b:本文, w:どうやって出たか}   dist(c) → 分布 */
+const esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const cellStr=(t,a)=>a.map(i=>`[${i}]=${pad(t[i])}`).join(' ');
 const FORTUNES=[
   {id:'omikuji',name:'おみくじ',origin:'日本',kind:'draw',cells:[0,1],school:'寺社の一般的な配分',
@@ -483,7 +493,7 @@ const FORTUNES=[
    dist(c){const me=sunSign(c.p.birth);return uniform([...Array(12).keys()],m=>aspect(me,m)[1])}},
   {id:'kotodama',name:'数霊',origin:'日本',kind:'calc',school:'よみがなの五十音数 × 今日の数',
    run(c){const me=kanaNum(c.p.kana),td=red(dsum(keyOf(c.today).replace(/-/g,''))),[l,sc]=numRel(me,td);
-     return{s:sc,r:`名前の数${me} × 今日の数${td} → ${l}`,h:`今日の数は${td}（${PD_K[td]}）`,b:KOTO_B[l],w:`「${c.p.kana}」を五十音の順番（あ=1、い=2…ん=46）で足して一桁にすると${me}。今日の日付の数字を全部足して一桁にすると${td}です。`}},
+     return{s:sc,r:`名前の数${me} × 今日の数${td} → ${l}`,h:`今日の数は${td}（${PD_K[td]}）`,b:KOTO_B[l],w:`「${esc(c.p.kana)}」を五十音の順番（あ=1、い=2…ん=46）で足して一桁にすると${me}。今日の日付の数字を全部足して一桁にすると${td}です。`}},
    dist(c){const me=kanaNum(c.p.kana);return uniform([1,2,3,4,5,6,7,8,9],n=>numRel(me,n)[1])}},
 ];
 function diceScore(d){
@@ -871,7 +881,8 @@ function refreshChip(){const b=$('#profileBtn');if(db.profile){b.hidden=false;b.
 
 function openOnboard(edit){
   show('onboard');$('#err').textContent='';
-  $('#cancelBtn').hidden=!edit;$('#saveBtn').textContent=edit?'保存する':'はじめる';
+  $('#cancelBtn').hidden=!edit;$('#wipeBtn').hidden=!edit;
+  if(!edit){$('#inName').value='';$('#inKana').value='';$('#inBirth').value='';setGender('')}$('#saveBtn').textContent=edit?'保存する':'はじめる';
   if(edit&&db.profile){$('#inName').value=db.profile.name;$('#inKana').value=db.profile.kana;$('#inBirth').value=db.profile.birthStr;setGender(db.profile.gender)}
   if(db.profile&&!db.profile.gender)$('#err').textContent='性別の項目が増えました。選んで保存してください';
 }
@@ -890,6 +901,9 @@ $('#saveBtn').onclick=()=>{
 $('#cancelBtn').onclick=()=>route();
 $('#profileBtn').onclick=()=>openOnboard(true);
 
+function keyAtJ(j){const d=new Date((j-2440588)*864e5);return keyOf({y:d.getUTCFullYear(),m:d.getUTCMonth()+1,d:d.getUTCDate()})}
+// 今日引いていれば今日まで、まだなら昨日までの連続日数
+function streak(){let n=0,j=jdn(today);if(!db.draws[keyAtJ(j)])j--;while(db.draws[keyAtJ(j)]&&n<3650){n++;j--}return n}
 function profileObj(){const p=db.profile;return{...p,birth:parseYMD(p.birthStr)}}
 function route(){
   refreshChip();
@@ -899,9 +913,11 @@ function route(){
   show('home');
   $('#homeDate').textContent=fmtDate(today);$('#homeName').textContent=db.profile.name;
   $('#fCount').textContent=FORTUNES.length;
+  {const st=streak();$('#homeStreak').textContent=st>0?`昨日まで ${st}日連続で占っています。今日も続けよう`:''}
   $('#tags').innerHTML=FORTUNES.map(f=>`<span>${f.name}</span>`).join('');
 }
 $('#drawBtn').onclick=()=>{
+  if(db.draws[TKEY])return route();
   db.draws[TKEY]={table:newTable(),at:Date.now()};persist();
   playOverlay(()=>renderResult(true));
 };
@@ -923,7 +939,7 @@ function renderResult(animate){
   const avoid=[];for(const[k,v]of Object.entries(db.draws)){const diff=jdn(today)-jdn(parseYMD(k));if(diff>0&&diff<=14&&v.shown)avoid.push(...v.shown)}
   const ev=EV=evaluate(profileObj(),today,d.table,{avoid,picks:d.picks});
   if(!d.picks){d.picks=Object.fromEntries(ev.rows.map(x=>[x.f.id,x.rd.picks]));d.shown=shownKeys(ev.rows);persist()}
-  $('#resDate').textContent=fmtDate(today);
+  {const st=streak();$('#resDate').textContent=fmtDate(today)+(st>1?`　🔥${st}日連続`:'')}
   const top=ev.rows.slice(0,3);
   $('#top3').innerHTML=top.map((x,i)=>`
     <div class="card r${i+1} tap" data-i="${i}">
@@ -1000,8 +1016,9 @@ function renderHow(table){
   paint();
 }
 $('#replayBtn').onclick=()=>{window.scrollTo(0,0);playOverlay(()=>renderResult(true))};
+if(DEV)$('#devBox').hidden=false;
 $('#redrawBtn').onclick=()=>{delete db.draws[TKEY];persist();window.scrollTo(0,0);route()};
-$('#wipeBtn').onclick=()=>{if(!confirm('名前・生年月日・履歴をすべて消しますか？'))return;try{localStorage.removeItem(STORE)}catch(e){}db={draws:{}};route()};
+$('#wipeBtn').onclick=()=>{if(!confirm('名前・生年月日・これまでの結果をすべて消します。よろしいですか？'))return;try{localStorage.removeItem(STORE)}catch(e){}db={draws:{}};route()};
 
 /* ========== シェア画像 ========== */
 const SERIF_C='"Hiragino Mincho ProN","Yu Mincho","YuMincho","Noto Serif JP",serif';
@@ -1024,7 +1041,7 @@ function drawShare(ev){
   const gold='#e8c872',ink='#f3ecdc',mute='#a89fbf';
   c.textAlign='center';
   c.fillStyle=gold;c.font=`600 34px ${SERIF_C}`;c.fillText('せ か い 占 い',W/2,100);
-  c.fillStyle=mute;c.font=`30px ${SERIF_C}`;c.fillText(`${fmtDate(today)}　${db.profile.name} さんの今日のいちばん`,W/2,152);
+  c.fillStyle=mute;c.font=`30px ${SERIF_C}`;c.fillText(`${fmtDate(today)}　今日のいちばん`,W/2,152);
   // top3
   const top=ev.rows.slice(0,3);let y=190;
   top.forEach((x,i)=>{
@@ -1085,6 +1102,9 @@ $('#shareBtn').onclick=openShare;
   addEventListener('resize',rs);rs();requestAnimationFrame(dr)})();
 
 route();
+// 開いたまま日付が変わったら読み直す
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!DEV&&keyOf(todayYMD())!==TKEY)location.reload()});
+setInterval(()=>{if(!document.hidden&&!DEV&&keyOf(todayYMD())!==TKEY)location.reload()},60000);
 </script>
 </body>
 </html>
